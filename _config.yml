@@ -158,8 +158,7 @@ compress_html:
   profile: false
   blanklines: false
   ignore:
-    envs:
-      - development
+    envs: all
 
 exclude:
   - vendor        # Avoid Jekyll mistakenly read the vendor directory on Travis-CI's VM .
