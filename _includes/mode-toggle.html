@@ -81,13 +81,15 @@
     get mode() { return sessionStorage.getItem(ModeToggle.MODE_KEY); }
 
     get isResolvedDarkMode() {
+        // 优先获取当前用户选择的
         if (this.isLightMode) {
             return false;
         }
-        return this.isSysDarkPrefer;
+        // 媒体查询当前系统 或者 用户主动选择黑夜模式
+        return this.isSysDarkPrefer || this.isDarkMode;
     }
 
-    updateCommentStyle() { 
+    updateCommentStyle() {
       var theme = "{{ site.utterances.light_theme }}";
       if (this.isResolvedDarkMode) {
           theme = "{{ site.utterances.dark_theme }}";

@@ -16,9 +16,7 @@ layout: compress
 {% endif %}
 
 {% capture prefer_mode %}
-  {% if site.theme_mode != "dual" %}
     mode="{{ site.theme_mode }}"
-  {% endif %}
 {% endcapture %}
 
 <html lang="{{ lang }}" {{ prefer_mode }} >

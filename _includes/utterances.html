@@ -2,7 +2,7 @@
   <script src="https://utteranc.es/client.js"
         repo="{{ site.utterances.repo }}"
         issue-term="pathname"
-        theme="{{ site.utterances.dark_theme }}"
+        theme="{{ site.utterances.theme }}"
         crossorigin="anonymous"
         async>
   </script>
@@ -10,6 +10,8 @@
 
 <script type="text/javascript">
     $(function() {
+      // 浏览器不会因为刷新页面而丢弃用户选择的主题
+      // 评论也是，在加载完dom之后根据当前主题重新set一下评论的主题
       window.onmessage = evt => {
         if (evt.origin === 'https://utteranc.es') {
           toggle.updateCommentStyle();
