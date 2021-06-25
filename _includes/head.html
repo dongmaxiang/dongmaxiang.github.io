@@ -57,7 +57,7 @@
       $(function (){
              if ('serviceWorker' in navigator) {
                  navigator.serviceWorker.register('/sw.js', {scope: '/'}).then(ServiceWorkerRegistration => {
-                     console.log("加载pwd-success")
+                     console.log("加载pwd-success");
                      console.log(ServiceWorkerRegistration);
                  }, err => {
                      console.log("加载pwd-error")
