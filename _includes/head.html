@@ -7,6 +7,18 @@
 -->
 
 <head>
+  <script>
+   /*   console.log("加载pwd")
+      if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/sw.js', {scope: '/'}).then(ServiceWorkerRegistration => {
+              console.log("加载pwd-success")
+              console.log(ServiceWorkerRegistration);
+          }, err => {
+              console.log("加载pwd-error")
+              console.error(err);
+          });
+      }*/
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <meta name="theme" content="{{ site.data.meta.name }} {{ site.data.meta.version }}">
@@ -47,7 +59,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
 
-  <script async
+  <script
     src="https://cdn.jsdelivr.net/combine/npm/popper.js@1.15.0,npm/bootstrap@4/dist/js/bootstrap.min.js"></script>
 
   {% include js-selector.html %}

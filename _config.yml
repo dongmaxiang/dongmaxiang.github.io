@@ -10,6 +10,7 @@
 
 title: anyOne
 port: 4001
+destination: ../temp/dongmaxiang
 
 tagline: 记录生活呗
 description: >-
