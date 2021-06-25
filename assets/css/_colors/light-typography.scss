@@ -28,9 +28,9 @@
 
   /* Sidebar */
   --sidebar-bg: radial-gradient(
-    circle,
-    rgb(155, 42, 50) 0%,
-    rgb(46, 35, 35) 100%);
+                  ellipse at bottom,
+                  rgb(50, 42, 100) 0%,
+                  rgb(35, 35, 46) 100%);
   --nav-cursor-color: #fcfcfc;
 
   /* Topbar */
