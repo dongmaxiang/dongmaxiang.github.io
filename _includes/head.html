@@ -7,18 +7,6 @@
 -->
 
 <head>
-  <script>
-   /*   console.log("加载pwd")
-      if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('/sw.js', {scope: '/'}).then(ServiceWorkerRegistration => {
-              console.log("加载pwd-success")
-              console.log(ServiceWorkerRegistration);
-          }, err => {
-              console.log("加载pwd-error")
-              console.error(err);
-          });
-      }*/
-  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <meta name="theme" content="{{ site.data.meta.name }} {{ site.data.meta.version }}">
@@ -64,4 +52,18 @@
 
   {% include js-selector.html %}
 
+
+  <script>
+      $(function (){
+             if ('serviceWorker' in navigator) {
+                 navigator.serviceWorker.register('/sw.js', {scope: '/'}).then(ServiceWorkerRegistration => {
+                     console.log("加载pwd-success")
+                     console.log(ServiceWorkerRegistration);
+                 }, err => {
+                     console.log("加载pwd-error")
+                     console.error(err);
+                 });
+             }
+      });
+  </script>
 </head>
