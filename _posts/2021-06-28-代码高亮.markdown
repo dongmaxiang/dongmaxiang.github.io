@@ -1,0 +1,36 @@
+---
+layout: post
+title: 代码高亮
+date: 2021-06-28 28:13:00.000000000 +08:00
+categories: [生活]
+tags: [琐碎,博客]
+---
+测试代码高亮
+
+```java
+@Override
+protected Object doGetInjectedBean(AnnotationAttributes attributes, Object bean, String beanName, Class<?> injectedType,
+                                   InjectionMetadata.InjectedElement injectedElement) throws Exception {
+    /**
+     * The name of bean that annotated Dubbo's {@link Service @Service} in local Spring {@link ApplicationContext}
+     */
+    String referencedBeanName = buildReferencedBeanName(attributes, injectedType);
+
+    /**
+     * The name of bean that is declared by {@link Reference @Reference} annotation injection
+     */
+    String referenceBeanName = getReferenceBeanName(attributes, injectedType);
+
+    ReferenceBean referenceBean = buildReferenceBeanIfAbsent(referenceBeanName, attributes, injectedType);
+
+    boolean localServiceBean = isLocalServiceBean(referencedBeanName, referenceBean, attributes);
+
+    prepareReferenceBean(referencedBeanName, referenceBean, localServiceBean);
+
+    registerReferenceBean(referencedBeanName, referenceBean, attributes, localServiceBean, injectedType);
+
+    cacheInjectedReferenceBean(referenceBean, injectedElement);
+
+    return referenceBean.get();
+}
+```
