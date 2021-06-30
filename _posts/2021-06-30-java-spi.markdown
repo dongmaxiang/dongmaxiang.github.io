@@ -15,8 +15,43 @@ ServiceLoader<ABC> abcLoaders = ServiceLoader.load(ABC.class);
 ![原理图](/assets/images/posts/java-spi.jpeg)
 
 ## class 是如何初始化的呢？
-通过对应的class 和构造方法，反射创建对应的实例
-> 其中有factoryMethod 这个后续在分析
+[通过provider可以获取到实例，然后进行初始化](#provider)  
+provider提供者
+> jdk11  
+
+* ModuleServicesLookupIterator  
+* LazyClassPathLookupIterator
+```java
+private Iterator<Provider<S>> newLookupIterator() {
+        assert layer == null || loader == null;
+        if (layer != null) {
+            return new LayerLookupIterator<>();
+        } else {
+            Iterator<Provider<S>> first = new ModuleServicesLookupIterator<>();
+            Iterator<Provider<S>> second = new LazyClassPathLookupIterator<>();
+            return new Iterator<Provider<S>>() {
+                @Override
+                public boolean hasNext() {
+                    return (first.hasNext() || second.hasNext());
+                }
+                @Override
+                public Provider<S> next() {
+                    if (first.hasNext()) {
+                        return first.next();
+                    } else if (second.hasNext()) {
+                        return second.next();
+                    } else {
+                        throw new NoSuchElementException();
+                    }
+                }
+            };
+        }
+    }
+```  
+  
+<i id ='provider'/>  
+  
+通过对应的class 和构造方法，反射创建对应的实例  
 ```java
     /**
      * A Provider implementation that supports invoking, with reduced
@@ -170,5 +205,4 @@ ServiceLoader<ABC> abcLoaders = ServiceLoader.load(ABC.class);
                     && Objects.equals(this.acc, that.acc);
         }
     }
-
 ```
