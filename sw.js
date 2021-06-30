@@ -9,7 +9,9 @@ layout: compress
 
 self.importScripts('{{ "/assets/js/data/cache-list.js" | relative_url }}');
 
-var cacheName = 'chirpy-{{ "now" | date: "%Y%m%d.%H%M" }}';
+function getCacheName(){
+    return new Date().getMonth() + 1 + '-' + new Date().getDate();
+}
 
 
 function isExcluded(url) {
@@ -25,7 +27,7 @@ function isExcluded(url) {
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(
-    caches.open(cacheName).then((cache) => {
+    caches.open(getCacheName()).then((cache) => {
       return cache.addAll(include);
     })
   );
@@ -37,7 +39,7 @@ self.addEventListener('fetch', (e) => {
     caches.match(e.request).then((r) => {
       /* console.log('[Service Worker] Fetching resource: ' + e.request.url); */
       return r || fetch(e.request).then((response) => {
-        return caches.open(cacheName).then((cache) => {
+        return caches.open(getCacheName()).then((cache) => {
           if (!isExcluded(e.request.url)) {
             /* console.log('[Service Worker] Caching new resource: ' + e.request.url); */
             cache.put(e.request, response.clone());
@@ -54,7 +56,7 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keyList) => {
           return Promise.all(keyList.map((key) => {
-        if(key !== cacheName) {
+        if(key !== getCacheName()) {
           return caches.delete(key);
         }
       }));

@@ -59,6 +59,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
   <script>
+      {% if jekyll.environment == 'production' %}
       $(function (){
           if ('serviceWorker' in navigator) {
               navigator.serviceWorker.register('/sw.js', {scope: '/'}).then(ServiceWorkerRegistration => {
@@ -70,6 +71,7 @@
               });
           }
       });
+      {% endif %}
   </script>
 
   <script src="https://cdn.jsdelivr.net/combine/npm/popper.js@1.15.0,npm/bootstrap@4/dist/js/bootstrap.min.js"></script>
