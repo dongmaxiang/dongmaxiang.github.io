@@ -23,7 +23,12 @@
       <div class="site-title">
         <a href="{{ '/' | relative_url }}">{{- site.title -}}</a>
       </div>
-      <div class="site-subtitle font-italic">{{- site.tagline -}}</div>
+<!--      <div class="site-subtitle font-italic">{{- site.tagline -}}</div>-->
+      <div class="site-subtitle font-italic">
+        <a id="toggle-sb-gb" target="_blank">
+          点我调整颜色哦
+        </a>
+      </div>
     </div>
   </div>
 
@@ -61,6 +66,12 @@
     {% include mode-toggle.html %}
   </span>
   <span class="icon-border"></span>
+
+<!--  <a id="toggle-sb-gb" target="_blank">-->
+<!--    <i class="fa fa-paint-brush fa-1"></i>-->
+<!--  </a>-->
+
+<!--  <span class="icon-border"></span>-->
 
   {% for entry in site.data.contact %}
     {% capture url %}
