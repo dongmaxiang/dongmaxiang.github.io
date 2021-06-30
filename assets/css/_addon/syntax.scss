@@ -43,7 +43,7 @@ html[mode=dark] {
   padding: 0.8rem 1rem;
 }
 
-$code-font-size: 0.85rem;
+$code-font-size: 0.7rem;
 
 div > pre {
   @extend %code-snippet-bg;
@@ -85,7 +85,7 @@ div > pre {
   pre {
     margin-bottom: 0;
     font-size: $code-font-size;
-    line-height: 1.4rem;
+    line-height: 0.96rem;
     word-wrap: normal; /* Fixed Safari overflow-x */
   }
   table {
@@ -101,6 +101,39 @@ div > pre {
     border: 0;
   }
 } //.highlight
+/*
+
+code {
+
+  &:before {
+    display: block;
+    content: ' ';
+    height: 32px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: #f6f6f6;
+    padding: 0 10px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+  }
+
+  &:after {
+    content: " ";
+    position: absolute;
+    border-radius: 50%;
+    background: #fc625d;
+    width: 10px;
+    height: 10px;
+    top: 0;
+    left: 15px;
+    margin-top: 11px;
+    -webkit-box-shadow: 20px 0 #fdbc40,40px 0 #35cd4b;
+    box-shadow: 20px 0 #fdbc40,40px 0 #35cd4b;
+  }
+}
+*/
 
 code {
   -webkit-hyphens: none;
