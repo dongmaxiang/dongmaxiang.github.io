@@ -87,12 +87,16 @@
       }
   </style>
   <script>
+      let value = localStorage.getItem("--sidebar-bg")
+      document.documentElement.style.setProperty('--sidebar-bg', value)
       $(function () {
-          $('#toggle-sb-gb').colorpicker({
+          $('#toggle-sb-bg').colorpicker({
               useAlpha: false,
               format: 'rgb',
           }).on('changeColor', function (e) {
-              document.documentElement.style.setProperty('--sidebar-bg', 'radial-gradient( ellipse at bottom, ' + e.value + ' 0%, rgb(35, 35, 46) 100%)')
+              let value = 'radial-gradient( ellipse at bottom, ' + e.value + ' 0%, rgb(35, 35, 46) 100%)';
+              document.documentElement.style.setProperty('--sidebar-bg', value)
+              localStorage.setItem("--sidebar-bg", value)
           });
       })
   </script>
