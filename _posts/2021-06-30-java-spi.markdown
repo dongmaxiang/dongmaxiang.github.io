@@ -13,3 +13,162 @@ service provider interface
 ServiceLoader<ABC> abcLoaders = ServiceLoader.load(ABC.class);
 ```
 ![原理图](/assets/images/posts/java-spi.jpeg)
+
+## class 是如何初始化的呢？
+通过对应的class 和构造方法，反射创建对应的实例
+> 其中有factoryMethod 这个后续在分析
+```java
+    /**
+     * A Provider implementation that supports invoking, with reduced
+     * permissions, the static factory to obtain the provider or the
+     * provider's no-arg constructor.
+     */
+    private static class ProviderImpl<S> implements Provider<S> {
+        final Class<S> service;
+        final Class<? extends S> type;
+        final Method factoryMethod;  // factory method or null
+        final Constructor<? extends S> ctor; // public no-args constructor or null
+        final AccessControlContext acc;
+
+        ProviderImpl(Class<S> service,
+                     Class<? extends S> type,
+                     Method factoryMethod,
+                     AccessControlContext acc) {
+            this.service = service;
+            this.type = type;
+            this.factoryMethod = factoryMethod;
+            this.ctor = null;
+            this.acc = acc;
+        }
+
+        ProviderImpl(Class<S> service,
+                     Class<? extends S> type,
+                     Constructor<? extends S> ctor,
+                     AccessControlContext acc) {
+            this.service = service;
+            this.type = type;
+            this.factoryMethod = null;
+            this.ctor = ctor;
+            this.acc = acc;
+        }
+
+        @Override
+        public Class<? extends S> type() {
+            return type;
+        }
+
+        @Override
+        public S get() {
+            if (factoryMethod != null) {
+                return invokeFactoryMethod();
+            } else {
+                return newInstance();
+            }
+        }
+
+        /**
+         * Invokes the provider's "provider" method to instantiate a provider.
+         * When running with a security manager then the method runs with
+         * permissions that are restricted by the security context of whatever
+         * created this loader.
+         */
+        private S invokeFactoryMethod() {
+            Object result = null;
+            Throwable exc = null;
+            if (acc == null) {
+                try {
+                    result = factoryMethod.invoke(null);
+                } catch (Throwable x) {
+                    exc = x;
+                }
+            } else {
+                PrivilegedExceptionAction<?> pa = new PrivilegedExceptionAction<>() {
+                    @Override
+                    public Object run() throws Exception {
+                        return factoryMethod.invoke(null);
+                    }
+                };
+                // invoke factory method with permissions restricted by acc
+                try {
+                    result = AccessController.doPrivileged(pa, acc);
+                } catch (Throwable x) {
+                    if (x instanceof PrivilegedActionException)
+                        x = x.getCause();
+                    exc = x;
+                }
+            }
+            if (exc != null) {
+                if (exc instanceof InvocationTargetException)
+                    exc = exc.getCause();
+                fail(service, factoryMethod + " failed", exc);
+            }
+            if (result == null) {
+                fail(service, factoryMethod + " returned null");
+            }
+            @SuppressWarnings("unchecked")
+            S p = (S) result;
+            return p;
+        }
+
+        /**
+         * Invokes Constructor::newInstance to instantiate a provider. When running
+         * with a security manager then the constructor runs with permissions that
+         * are restricted by the security context of whatever created this loader.
+         */
+        private S newInstance() {
+            S p = null;
+            Throwable exc = null;
+            if (acc == null) {
+                try {
+                    p = ctor.newInstance();
+                } catch (Throwable x) {
+                    exc = x;
+                }
+            } else {
+                PrivilegedExceptionAction<S> pa = new PrivilegedExceptionAction<>() {
+                    @Override
+                    public S run() throws Exception {
+                        return ctor.newInstance();
+                    }
+                };
+                // invoke constructor with permissions restricted by acc
+                try {
+                    p = AccessController.doPrivileged(pa, acc);
+                } catch (Throwable x) {
+                    if (x instanceof PrivilegedActionException)
+                        x = x.getCause();
+                    exc = x;
+                }
+            }
+            if (exc != null) {
+                if (exc instanceof InvocationTargetException)
+                    exc = exc.getCause();
+                String cn = ctor.getDeclaringClass().getName();
+                fail(service,
+                     "Provider " + cn + " could not be instantiated", exc);
+            }
+            return p;
+        }
+
+        // For now, equals/hashCode uses the access control context to ensure
+        // that two Providers created with different contexts are not equal
+        // when running with a security manager.
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(service, type, acc);
+        }
+
+        @Override
+        public boolean equals(Object ob) {
+            if (!(ob instanceof ProviderImpl))
+                return false;
+            @SuppressWarnings("unchecked")
+            ProviderImpl<?> that = (ProviderImpl<?>)ob;
+            return this.service == that.service
+                    && this.type == that.type
+                    && Objects.equals(this.acc, that.acc);
+        }
+    }
+
+```
