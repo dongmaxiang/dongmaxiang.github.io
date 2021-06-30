@@ -46,17 +46,6 @@
 
 
   <script>
-      $(function (){
-          if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.register('/sw.js', {scope: '/'}).then(ServiceWorkerRegistration => {
-                  console.log("加载pwd-success");
-                  console.log(ServiceWorkerRegistration);
-              }, err => {
-                  console.log("加载pwd-error");
-                  console.error(err);
-              });
-          }
-      });
       var _hmt = _hmt || [];
       (function() {
           var hm = document.createElement("script");
@@ -69,6 +58,19 @@
   <!-- JavaScripts -->
 
   <script src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script>
+      $(function (){
+          if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.register('/sw.js', {scope: '/'}).then(ServiceWorkerRegistration => {
+                  console.log("加载pwd-success");
+                  console.log(ServiceWorkerRegistration);
+              }, err => {
+                  console.log("加载pwd-error");
+                  console.error(err);
+              });
+          }
+      });
+  </script>
 
   <script src="https://cdn.jsdelivr.net/combine/npm/popper.js@1.15.0,npm/bootstrap@4/dist/js/bootstrap.min.js"></script>
 
