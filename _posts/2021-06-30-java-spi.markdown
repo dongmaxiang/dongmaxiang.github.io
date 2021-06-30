@@ -1,0 +1,14 @@
+---
+layout: post
+title: java-spi
+date: 2021-06-30 11:40:17.000000000 +08:00
+categories: [java,spi]
+tags: [java,源码]
+---
+## javaSPI机制
+service provider interface
+```java
+// 通过遍历即可获取到对应的class,那么原理是什么呢？
+ServiceLoader<ABC> abcLoaders = ServiceLoader.load(ABC.class);
+```
+![原理图](/assets/images/posts/java-spi.jpeg)
