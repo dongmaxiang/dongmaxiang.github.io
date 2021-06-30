@@ -4,6 +4,7 @@ title: java-spi
 date: 2021-06-30 11:40:17.000000000 +08:00
 categories: [java,spi]
 tags: [java,源码]
+permalink: /java-spi.html
 ---
 ## javaSPI机制
 service provider interface

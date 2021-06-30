@@ -5,7 +5,11 @@ date: 2021-06-30 10:45:03.000000000 +08:00
 categories: [java,dubbo]
 tags: [dubbo-spi,源码,java]
 ---
+# dubbo-SPI
+## 参考javaSPI机制 [java-spi]({{ "/java-spi.html" | relative_url }})
+
 ## 了解dubbo工作原理必会spi机制
+- dubbo核心类
 service provider interface
 ```java
 public class ExtensionLoader<T> {
