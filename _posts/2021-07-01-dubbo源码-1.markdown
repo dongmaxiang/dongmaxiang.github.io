@@ -1,0 +1,104 @@
+---
+layout: post
+title: dubbo-spi
+date: 2021-07-1 11:29:53.000000000 +08:00
+categories: [java,dubbo]
+tags: [dubbo核心,源码,java]
+---
+# dubbo
+## 了解dubbo工作原理必会spi机制
+* 参考javaSPI机制 [java-spi]({{ "/java-spi.html" | relative_url }})
+
+## 为什么java有spi机制，dubbo还要自创一套？
+* 没有key value机制
+* javaSpi 如果有多个实现类，只能依次加载，不能精准加载
+
+##  dubbo spi 扩展类
+### 用法
+```java
+ExtensionLoader<ABC> LOADER = ExtensionLoader.getExtensionLoader(ABC.class);
+ABC instance = LOADER.getExtension("key");
+```
+
+### 原理-源码
+#### SPI注解
+dubboSpi 必须有的注解  
+```java
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.TYPE})
+public @interface SPI {
+    /**
+     * SPI必须注解在接口上
+     * 该属性代码SPI的默认实现名称
+     */
+    String value() default "";
+}
+```
+
+#### 加载路径
+```java
+// 加载策略，JAVA-SPI
+public interface LoadingStrategy extends Prioritized {
+    String directory();
+}
+```
+* 默认实现
+  ![原理图](/assets/images/posts/2021/07/dubbo-spi.png)
+
+#### 源码解析
+```java
+public class ExtensionLoader<T> {
+    // 缓存
+    private static final ConcurrentMap<Class<?>, ExtensionLoader<?>> EXTENSION_LOADERS = new ConcurrentHashMap<>(64);
+    
+    // 初始化
+    private ExtensionLoader(Class<?> type) {
+        this.type = type;
+        objectFactory = (type == ExtensionFactory.class ? null : ExtensionLoader.getExtensionLoader(ExtensionFactory.class).getAdaptiveExtension());
+    }
+    // 静态方法
+    public static <T> ExtensionLoader<T> getExtensionLoader(Class<T> type) {
+        if (type == null) {
+            throw new IllegalArgumentException("Extension type == null");
+        }
+        if (!type.isInterface()) {
+            throw new IllegalArgumentException("Extension type (" + type + ") is not an interface!");
+        }
+        if (!type.isAnnotationPresent(org.apache.dubbo.common.extension.SPI.class)) {
+            throw new IllegalArgumentException("Extension type (" + type +
+                    ") is not an extension, because it is NOT annotated with @" + SPI.class.getSimpleName() + "!");
+        }
+
+        // 读缓存
+        ExtensionLoader<T> loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
+        if (loader == null) {
+            EXTENSION_LOADERS.putIfAbsent(type, new ExtensionLoader<T>(type));
+            loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
+        }
+        return loader;
+    }
+    
+    // 获取指定名称的实例
+    public T getExtension(String name) {
+        return getExtension(name, true);
+    }
+
+    // 最终会调用此方法，加载对应的class.
+    // key为配置文件的中的名称，value为class
+    private Map<String, Class<?>> loadExtensionClasses() {
+        // 读取spi注解value属性，该值为spi的默认实现名称
+        cacheDefaultExtensionName();
+
+        Map<String, Class<?>> extensionClasses = new HashMap<>();
+
+        // strategies 是加载策略，dubboSpi加载实现类需要指定目录
+        for (LoadingStrategy strategy : strategies) {
+            loadDirectory(extensionClasses, strategy.directory(), type.getName(), strategy.preferExtensionClassLoader(), strategy.overridden(), strategy.excludedPackages());
+            loadDirectory(extensionClasses, strategy.directory(), type.getName().replace("org.apache", "com.alibaba"), strategy.preferExtensionClassLoader(), strategy.overridden(), strategy.excludedPackages());
+        }
+
+        return extensionClasses;
+    }
+}
+```

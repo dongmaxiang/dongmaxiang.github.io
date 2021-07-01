@@ -82,11 +82,17 @@
   <script type="text/javascript" src="/assets/js/bootstrap-colorpicker.min.js"></script>
 
   <style type="text/css">
+      /* 颜色选择器 */
       .colorpicker-color {
           display: none !important;
       }
+      /* 代码块最大高度 */
+      .highlight {
+          max-height: 66.6vh;
+      }
   </style>
   <script>
+      /* 面板颜色选择器 */
       let value = localStorage.getItem("--sidebar-bg");
       document.documentElement.style.setProperty('--sidebar-bg', value);
       $(function () {
