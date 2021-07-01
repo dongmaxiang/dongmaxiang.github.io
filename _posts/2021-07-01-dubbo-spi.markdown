@@ -1,0 +1,300 @@
+---
+layout: post
+title: 初识1-dubbo-spi
+date: 2021-07-1 11:29:53.000000000 +08:00
+categories: [java,dubbo]
+tags: [dubbo-spi,源码,java]
+permalink: /dubbo-spi.html
+---
+# 了解dubbo工作原理必会spi机制
+* 参考javaSPI机制 [java-spi]({{ "/java-spi.html" | relative_url }})
+
+## 为什么java有spi机制，dubbo还要自创一套？
+* 没有key value机制
+* javaSpi 如果有多个实现类，只能依次加载，不能精准加载
+
+##  dubbo spi
+### 用法  
+```java
+ExtensionLoader<ABC> LOADER = ExtensionLoader.getExtensionLoader(ABC.class);
+ABC instance = LOADER.getExtension("key");
+```
+
+### 原理-源码
+* SPI注解  
+dubboSpi 必须有的注解  
+  
+```java
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.TYPE})
+public @interface SPI {
+    /**
+     * SPI必须注解在接口上
+     * 该属性代码SPI的默认实现名称
+     */
+    String value() default "";
+}
+```
+
+* 加载路径  
+```java
+// 加载策略，JAVA-SPI
+public interface LoadingStrategy extends Prioritized {
+    String directory();
+}
+```
+* 默认实现
+  ![原理图](/assets/images/posts/2021/07/dubbo-spi.png)
+
+# 源码解析  
+```java
+public class ExtensionLoader<T> {
+  // 缓存
+  private static final ConcurrentMap<Class<?>, ExtensionLoader<?>> EXTENSION_LOADERS = new ConcurrentHashMap<>(64);
+
+  // 加载策略，如上图的默认实现
+  private static volatile LoadingStrategy[] strategies = loadLoadingStrategies();
+  
+  private static LoadingStrategy[] loadLoadingStrategies() {
+    return stream(ServiceLoader.load(LoadingStrategy.class).spliterator(), false)
+            .sorted()
+            .toArray(LoadingStrategy[]::new);
+  }
+
+
+  // 初始化
+  private ExtensionLoader(Class<?> type) {
+    this.type = type;
+    objectFactory = (type == ExtensionFactory.class ? null : ExtensionLoader.getExtensionLoader(ExtensionFactory.class).getAdaptiveExtension());
+  }
+
+  // 静态方法
+  public static <T> ExtensionLoader<T> getExtensionLoader(Class<T> type) {
+    if (type == null) {
+      throw new IllegalArgumentException("Extension type == null");
+    }
+    if (!type.isInterface()) {
+      throw new IllegalArgumentException("Extension type (" + type + ") is not an interface!");
+    }
+    if (!type.isAnnotationPresent(org.apache.dubbo.common.extension.SPI.class)) {
+      throw new IllegalArgumentException("Extension type (" + type +
+              ") is not an extension, because it is NOT annotated with @" + SPI.class.getSimpleName() + "!");
+    }
+
+    // 读缓存
+    ExtensionLoader<T> loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
+    if (loader == null) {
+      EXTENSION_LOADERS.putIfAbsent(type, new ExtensionLoader<T>(type));
+      loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
+    }
+    return loader;
+  }
+
+  // 获取指定名称的实例
+  public T getExtension(String name) {
+    return getExtension(name, true);
+  }
+
+  // 最终会调用此方法，加载对应的class.
+  // key为配置文件的中的名称，value为class
+  private Map<String, Class<?>> loadExtensionClasses() {
+    // 读取spi注解value属性，该值为spi的默认实现名称
+    cacheDefaultExtensionName();
+
+    Map<String, Class<?>> extensionClasses = new HashMap<>();
+
+    // strategies 是加载策略，dubboSpi加载实现类需要指定目录
+    for (LoadingStrategy strategy : strategies) {
+      loadDirectory(extensionClasses, strategy.directory(), type.getName(), strategy.preferExtensionClassLoader(), strategy.overridden(), strategy.excludedPackages());
+      loadDirectory(extensionClasses, strategy.directory(), type.getName().replace("org.apache", "com.alibaba"), strategy.preferExtensionClassLoader(), strategy.overridden(), strategy.excludedPackages());
+    }
+
+    return extensionClasses;
+  }
+}
+```
+
+## Activate介绍
+
+<i id="dubbo-spi中有3个方法">dubbo-spi中有3个方法</i>
+```java
+List<T> getActivateExtension(URL url, String[] values);
+List<T> getActivateExtension(URL url, String key, String group);
+List<T> getActivateExtension(URL url, String[] values, String group);
+```
+
+为什么会有activate呢？
+原来是有Activate注解在起作用  
+```java
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.TYPE, ElementType.METHOD})
+public @interface Activate {
+    /**
+     * Activate the current extension when one of the groups matches. The group passed into
+     * {@link ExtensionLoader#getActivateExtension(URL, String, String)} will be used for matching.
+     *
+     * @return group names to match
+     * @see ExtensionLoader#getActivateExtension(URL, String, String)
+     */
+    String[] group() default {};
+
+    /**
+     * Activate the current extension when the specified keys appear in the URL's parameters.
+     * <p>
+     * For example, given <code>@Activate("cache, validation")</code>, the current extension will be return only when
+     * there's either <code>cache</code> or <code>validation</code> key appeared in the URL's parameters.
+     * </p>
+     *
+     * @return URL parameter keys
+     * @see ExtensionLoader#getActivateExtension(URL, String)
+     * @see ExtensionLoader#getActivateExtension(URL, String, String)
+     */
+    String[] value() default {};
+
+    /**
+     * Relative ordering info, optional
+     * Deprecated since 2.7.0
+     *
+     * @return extension list which should be put before the current one
+     */
+    @Deprecated
+    String[] before() default {};
+
+    /**
+     * Relative ordering info, optional
+     * Deprecated since 2.7.0
+     *
+     * @return extension list which should be put after the current one
+     */
+    @Deprecated
+    String[] after() default {};
+
+    /**
+     * Absolute ordering info, optional
+     *
+     * @return absolute ordering info
+     */
+    int order() default 0;
+}
+```
+
+当dubbo-spi在加载实现类时，会判断实现类是否有该注解，如果有的话则会把这些实现类(带有注解的)缓存起来。
+这样调用[getActivateExtension](#dubbo-spi中有3个方法)时就会获取到对应的实现
+
+### 使用图
+![配置图](/assets/images/posts/2021/07/dubbo-filter.png)
+
+
+## wrapper介绍
+何为wrapper ?
+就是包装，对原有对象的包装。
+如果spi实现类没有空构造方法并且有一个有参的构造函数，且类型是当前实现的接口。
+那么在最终暴露的对象为此wrapper。
+
+### 实例化代码如下  
+
+- 先加载class，并判断是否为wrapper  
+
+```java
+public class ExtensionLoader<T> {
+  /**
+   * test if clazz is a wrapper class
+   * <p>
+   * which has Constructor with given class type as its only argument
+   */
+  private boolean isWrapperClass(Class<?> clazz) {
+    try {
+      clazz.getConstructor(type);
+      return true;
+    } catch (NoSuchMethodException e) {
+      return false;
+    }
+  }
+
+  private void loadClass(Map<String, Class<?>> extensionClasses, java.net.URL resourceURL, Class<?> clazz, String name,
+                         boolean overridden) throws NoSuchMethodException {
+    if (!type.isAssignableFrom(clazz)) {
+      throw new IllegalStateException("Error occurred when loading extension class (interface: " +
+              type + ", class line: " + clazz.getName() + "), class "
+              + clazz.getName() + " is not subtype of interface.");
+    }
+    if (clazz.isAnnotationPresent(Adaptive.class)) {
+      cacheAdaptiveClass(clazz, overridden);
+    }
+    // 判断是否为包装
+    else if (isWrapperClass(clazz)) {
+      cacheWrapperClass(clazz);
+    } else {
+      clazz.getConstructor();
+      if (StringUtils.isEmpty(name)) {
+        name = findAnnotationName(clazz);
+        if (name.length() == 0) {
+          throw new IllegalStateException("No such extension name for the class " + clazz.getName() + " in the config " + resourceURL);
+        }
+      }
+
+      String[] names = NAME_SEPARATOR.split(name);
+      if (ArrayUtils.isNotEmpty(names)) {
+        cacheActivateClass(clazz, names[0]);
+        for (String n : names) {
+          cacheName(clazz, n);
+          saveInExtensionClass(extensionClasses, clazz, n, overridden);
+        }
+      }
+    }
+  }
+}
+```
+
+- 初始化判断需要wrap，则进行包装并返回  
+```java
+public class ExtensionLoader<T> {
+  @SuppressWarnings("unchecked")
+  private T createExtension(String name, boolean wrap) {
+    Class<?> clazz = getExtensionClasses().get(name);
+    if (clazz == null) {
+      throw findException(name);
+    }
+    try {
+      T instance = (T) EXTENSION_INSTANCES.get(clazz);
+      if (instance == null) {
+        EXTENSION_INSTANCES.putIfAbsent(clazz, clazz.newInstance());
+        instance = (T) EXTENSION_INSTANCES.get(clazz);
+      }
+      injectExtension(instance);
+
+
+      // 如果wrap为true
+      if (wrap) {
+
+        List<Class<?>> wrapperClassesList = new ArrayList<>();
+        if (cachedWrapperClasses != null) {
+          wrapperClassesList.addAll(cachedWrapperClasses);
+          // 先排序
+          wrapperClassesList.sort(WrapperComparator.COMPARATOR);
+          Collections.reverse(wrapperClassesList);
+        }
+
+        if (CollectionUtils.isNotEmpty(wrapperClassesList)) {
+          for (Class<?> wrapperClass : wrapperClassesList) {
+            Wrapper wrapper = wrapperClass.getAnnotation(Wrapper.class);
+            if (wrapper == null
+                    || (ArrayUtils.contains(wrapper.matches(), name) && !ArrayUtils.contains(wrapper.mismatches(), name))) {
+              // 进行包装
+              instance = injectExtension((T) wrapperClass.getConstructor(type).newInstance(instance));
+            }
+          }
+        }
+      }
+
+      initExtension(instance);
+      return instance;
+    } catch (Throwable t) {
+      throw new IllegalStateException("Extension instance (name: " + name + ", class: " +
+              type + ") couldn't be instantiated: " + t.getMessage(), t);
+    }
+  }
+}
+```
