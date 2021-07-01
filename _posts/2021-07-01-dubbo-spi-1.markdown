@@ -1,9 +1,10 @@
 ---
 layout: post
-title: dubbo-spi
+title: 初识1-dubbo-spi
 date: 2021-07-1 11:29:53.000000000 +08:00
 categories: [java,dubbo]
-tags: [dubbo核心,源码,java]
+tags: [dubbo-spi,源码,java]
+permalink: /dubbo-spi.html
 ---
 # dubbo
 ## 了解dubbo工作原理必会spi机制
