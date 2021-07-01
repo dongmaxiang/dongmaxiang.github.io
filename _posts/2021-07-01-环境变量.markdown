@@ -1,0 +1,23 @@
+---
+layout: post
+title: 环境变量
+date: 2021-07-1 18:46:50.000000000 +08:00
+categories: [java,基础]
+tags: [java]
+---
+* main方法参数  
+
+使用：java  类名   【参数1】 【参数2】 【参数3】 .。。。
+```java
+    public static void main(String[] args) {
+        System.out.println(args);
+    }
+```
+
+* System.getenv
+获取系统环境变量  
+同 linux 下 `export`
+
+* System.getProperty  
+获取java程序变量
+通过 java -Dk=v配置
