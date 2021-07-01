@@ -5,8 +5,7 @@ date: 2021-07-1 18:46:50.000000000 +08:00
 categories: [java,基础]
 tags: [java]
 ---
-* main方法参数  
-
+* main方法参数
 使用：java  类名   【参数1】 【参数2】 【参数3】 .。。。
 ```java
     public static void main(String[] args) {
