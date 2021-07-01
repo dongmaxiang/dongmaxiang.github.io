@@ -6,6 +6,7 @@ categories: [java,utils]
 tags: [java,工具类,动态代理]
 ---
 
+* 看代码  
 ```java
 import org.springframework.beans.BeanUtils;
 import org.springframework.cglib.proxy.Enhancer;
@@ -112,5 +113,32 @@ public class DynamicProxy<T> implements MethodInterceptor {
          */
         Object call(T target, MethodProxy proxyMethod, Object[] args, Method originMethod) throws Throwable;
     }
+}
+```
+
+* 使用方式之一
+```java
+public class Pageable {
+    private static final int DEFAULT_SIZE = 10;
+    private static final int MAX_SIZE = 1000;
+
+    public static final Pageable ONLY_ONE = new DynamicProxy<>(newOnlyOne(), true)
+            .getProxyWithWriteMethod((target, proxyMethod, args, originMethod) -> {
+                throw new Throwable("禁止修改全局的类");
+            });
+
+    public static Pageable newOnlyOne() {
+        Pageable onlyOne = new Pageable();
+        onlyOne.setSearchCount(false);
+        onlyOne.setPage(1);
+        onlyOne.setPageSize(1);
+        return onlyOne;
+    }
+
+    private long page = 1;
+
+    private long pageSize = DEFAULT_SIZE;
+
+    private boolean isSearchCount = true;
 }
 ```
