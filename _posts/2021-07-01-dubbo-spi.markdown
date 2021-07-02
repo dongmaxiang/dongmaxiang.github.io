@@ -1,6 +1,6 @@
 ---
 layout: post
-title: 初识1-dubbo-spi
+title: 初识-dubbo-spi
 date: 2021-07-1 11:29:53.000000000 +08:00
 categories: [java,dubbo]
 tags: [dubbo-spi,源码,java]

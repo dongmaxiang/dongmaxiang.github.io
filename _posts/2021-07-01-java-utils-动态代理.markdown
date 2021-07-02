@@ -5,8 +5,7 @@ date: 2021-07-1 18:58:55.000000000 +08:00
 categories: [java,utils]
 tags: [java,工具类,动态代理]
 ---
-
-* 看代码  
+# 代码  
 ```java
 import org.springframework.beans.BeanUtils;
 import org.springframework.cglib.proxy.Enhancer;
@@ -116,7 +115,7 @@ public class DynamicProxy<T> implements MethodInterceptor {
 }
 ```
 
-* 使用方式之一
+## 使用方式之一
 ```java
 public class Pageable {
     private static final int DEFAULT_SIZE = 10;
