@@ -71,46 +71,48 @@ public class ObjectUtils extends org.apache.commons.lang3.ObjectUtils {
         return t;
     }
 }
-```
+```  
 
 * 代码复用、最终还是调用[一个枚举对应多个标识](#一个枚举对应多个标识)那个工具类  
-```java
-import ObjectUtils;
-import java.io.Serializable;
-import java.util.Optional;
-
-/**
- * IdentityIEnum
- * 只能有一个标识的枚举
- *
- * @author anyOne
- * @since 2021/5/12 2:32 PM
- */
-public interface IEnum<T extends Serializable> extends IEnums<T> {
-
+    ```java
+    import ObjectUtils;
+    import java.io.Serializable;
+    import java.util.Optional;
+    
     /**
-     * 获取枚举的标识
+     * IdentityIEnum
+     * 只能有一个标识的枚举
+     *
+     * @author anyOne
+     * @since 2021/5/12 2:32 PM
      */
-    T getIdentity();
-
-    default T[] getIdentities() {
-        return ObjectUtils.array(getIdentity());
+    public interface IEnum<T extends Serializable> extends IEnums<T> {
+    
+        /**
+         * 获取枚举的标识
+         */
+        T getIdentity();
+  
+        // 默认实现获取多个标识 
+        default T[] getIdentities() {
+            // @see getIdentity 调用获取单个标识，然后通过util变成一个数组。
+            return ObjectUtils.array(getIdentity());
+        }
+    
+        static <T extends Serializable, E extends IEnum<T>> E mustGetEnum(Class<E> enumClass, T identity) {
+            return IEnums.mustGetEnum(enumClass, identity);
+        }
+    
+        static <T extends Serializable, E extends IEnum<T>> Optional<E> getEnum(Class<E> enumClass, T identity) {
+            return IEnums.getEnum(enumClass, identity);
+        }
+    
+        static <T extends Serializable, E extends IEnum<T>> E getEnum(Class<E> enumClass, T identity, E defaultValue) {
+            return IEnums.getEnum(enumClass, identity, defaultValue);
+        }
+    
     }
-
-    static <T extends Serializable, E extends IEnum<T>> E mustGetEnum(Class<E> enumClass, T identity) {
-        return IEnums.mustGetEnum(enumClass, identity);
-    }
-
-    static <T extends Serializable, E extends IEnum<T>> Optional<E> getEnum(Class<E> enumClass, T identity) {
-        return IEnums.getEnum(enumClass, identity);
-    }
-
-    static <T extends Serializable, E extends IEnum<T>> E getEnum(Class<E> enumClass, T identity, E defaultValue) {
-        return IEnums.getEnum(enumClass, identity, defaultValue);
-    }
-
-}
-```
+    ```  
 
 ## 使用方式之一
 
@@ -131,6 +133,7 @@ public enum ENV implements IEnums<String> {
         this.envs = envs;
     }
 
+    // 只要实现此方法即可
     @Override
     public String[] getIdentities() {
         return envs;
