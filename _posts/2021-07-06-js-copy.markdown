@@ -10,13 +10,16 @@ tags: [js,util]
 提示用户体验
 
 ```javascript
-function copy(val) {
-  var $temp = $("<input>");
-  $("body").append($temp);
-  $temp.val(val).select();
-  document.execCommand("copy");
-  $temp.remove();
+// 获取val
+let val = "";
+// 这点代码是我们在confluence 贴的sql代码片段。jq执行即可获取全部的sql
+$('.code .container div').each((i,e)=>val+= $(e).text() + "\n");
 
-  alert("Link copied successfully!");
-}
+// 执行copy
+let input = document.createElement('textarea');
+input.value = val;
+document.body.appendChild(input);
+input.select();
+document.execCommand('copy');
+document.body.removeChild(input);
 ```
