@@ -1,0 +1,22 @@
+---
+layout: post
+title: js-copy
+date: 2021-07-06 14:24:00.000000000 +08:00
+categories: [js,util]
+tags: [js,util]
+---
+
+觉得手动copy麻烦的话，写一个小脚本，执行即可copy  
+提示用户体验
+
+```javascript
+function copy(val) {
+  var $temp = $("<input>");
+  $("body").append($temp);
+  $temp.val(val).select();
+  document.execCommand("copy");
+  $temp.remove();
+
+  alert("Link copied successfully!");
+}
+```
