@@ -12,7 +12,7 @@ tags: [js,开发工具类]
 ```javascript
 // 获取val
 let val = "";
-// 这点代码是我们在confluence 贴的sql代码片段。jq执行即可获取全部的sql
+// 这段代码是我们在confluence 维护的sql代码片段。执行即可获取全部的sql
 $('.code .container div').each((i,e)=>val+= $(e).text() + "\n");
 
 // 执行copy

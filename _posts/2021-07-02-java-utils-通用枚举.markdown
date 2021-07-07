@@ -7,7 +7,37 @@ tags: [java,开发工具类,枚举]
 ---
 
 # 使用场景
-我们一般用枚举来代表数字或者字符串，避免魔法值的产生，有时需要根据数字或字符串获取到对应的枚举。避免**冗余代码**，所以用到此工具类
+我们一般用枚举来代表数字或者字符串，避免魔法值的产生。
+有时需要根据数字或字符串获取到对应的枚举。
+虽然可以在枚举里面写静态方法根据int获取对应的枚举也可以做到，但是你需要在一个枚举写一个方法，如果有N多个枚举则会非常的冗余  
+类似于这段代码
+```java
+@Getter
+public enum Condition {
+  ONCE(0, "满"),
+  EACH_TIMES(1, "每满"),
+  LADDERED(2, "阶梯满");
+
+  private final int code;
+  private final String name;
+
+  Condition(int code, String name) {
+    this.code = code;
+    this.name = name;
+  }
+
+  // 类似于这段代码
+  public static Condition getTypeByCode(int code) {
+    for (Condition value : Condition.values()) {
+      if (value.getCode() == code) {
+        return value;
+      }
+    }
+    return null;
+  }
+}
+```
+避免**冗余代码**，所以用到此工具类
 
 ## 代码  
 
@@ -144,4 +174,7 @@ public enum ENV implements IEnums<String> {
 * 使用详情  
 ```java
 ENV env = IEnums.getEnum(ENV.class, "dev", RELEASE);
+ENV test1 = IEnums.getEnum(ENV.class, "test1", RELEASE);
+ENV test2 = IEnums.getEnum(ENV.class, "test2", RELEASE);
+assert test1 == test2;
 ```

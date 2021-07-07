@@ -5,6 +5,13 @@ date: 2021-07-1 18:58:55.000000000 +08:00
 categories: [java,工具类]
 tags: [java,开发工具类,动态代理]
 ---
+动态代理有很多使用的场景，比如  
+* springAOP切入
+* spring事务
+* 自定义业务场景
+
+[本文的使用场景（点我）](#本文的使用场景)
+
 # 代码  
 ```java
 import org.springframework.beans.BeanUtils;
@@ -115,7 +122,11 @@ public class DynamicProxy<T> implements MethodInterceptor {
 }
 ```
 
-## 使用方式之一
+## <span id='本文的使用场景'>使用方式之一</span>
+分页查询只想查询一个，但是每次new对象在去赋值，非常浪费时间。并且还会出遗漏的问题    
+所以建一个全局的对象，但是这个全局的对象，他又是多线程共享，不能保证他的安全，比如我只想保证他的变量page=1,别的线程set就会影响其他线程。  
+所以如果我建立一个全局的变量，大家共享，也不怕被set而影响其他的线程，那么可以用到此动态代理
+
 ```java
 public class Pageable {
     private static final int DEFAULT_SIZE = 10;
@@ -123,6 +134,7 @@ public class Pageable {
 
     public static final Pageable ONLY_ONE = new DynamicProxy<>(newOnlyOne(), true)
             .getProxyWithWriteMethod((target, proxyMethod, args, originMethod) -> {
+                // 此处抛出异常，也可以return null，但我建议还是把问题暴露出去，避免留坑
                 throw new Throwable("禁止修改全局的类");
             });
 
