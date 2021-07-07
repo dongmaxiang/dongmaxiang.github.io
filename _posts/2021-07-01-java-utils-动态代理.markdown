@@ -2,8 +2,8 @@
 layout: post
 title: 动态代理
 date: 2021-07-1 18:58:55.000000000 +08:00
-categories: [java,utils]
-tags: [java,工具类,动态代理]
+categories: [java,工具类]
+tags: [java,开发工具类,动态代理]
 ---
 # 代码  
 ```java

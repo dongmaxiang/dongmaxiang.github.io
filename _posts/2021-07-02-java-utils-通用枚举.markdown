@@ -2,8 +2,8 @@
 layout: post
 title: 通用枚举
 date: 2021-07-02 15:15:00.000000000 +08:00
-categories: [java,utils]
-tags: [java,工具类,枚举]
+categories: [java,工具类]
+tags: [java,开发工具类,枚举]
 ---
 
 # 使用场景

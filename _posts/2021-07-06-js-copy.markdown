@@ -2,8 +2,8 @@
 layout: post
 title: js-copy
 date: 2021-07-06 14:24:00.000000000 +08:00
-categories: [js,util]
-tags: [js,util]
+categories: [js,工具类]
+tags: [js,开发工具类]
 ---
 
 觉得手动copy麻烦的话，写一个小脚本，执行即可copy  
