@@ -4,21 +4,11 @@ layout: compress
 
 self.importScripts('{{ "/assets/js/data/cache-list.js" | relative_url }}');
 
-self.previousCacheName = getCacheName();
+/* 每次推送文章都会清楚缓存 */
+self.previousCacheName = 'chirpy-{{ "now" | date: "%Y%m%d.%H%M%S" }}';
 
 function getCacheName() {
-    let cacheName = new Date().getMonth() + 1 + '-' + new Date().getDate();
-    if (self.previousCacheName !== cacheName) {
-        self.previousCacheName = cacheName;
-        caches.keys().then((keyList) => {
-            keyList.map((key) => {
-                if (key !== cacheName) {
-                    return caches.delete(key);
-                }
-            })
-        })
-    }
-    return cacheName;
+    return self.previousCacheName;
 }
 
 
