@@ -46,7 +46,6 @@ public enum Condition {
 ```java
 import java.io.Serializable;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * IdentityIEnums
