@@ -1,0 +1,289 @@
+---
+layout: post
+title: mvc枚举序列化和反序列化
+date: 2021-07-13 10:49:00.000000000 +08:00
+categories: [java,枚举]
+tags: [开发工具类,序列化,反序列化,枚举,mvc]
+---
+
+# 必须用到的枚举工具类
+* 参考通用枚举 [通用枚举]({{ "/通用枚举" | relative_url }})
+
+
+# 使用背景
+spring mvc 默认是根据枚举的名称进行序列化或者反序列化，但是在实际开发当中，我们一般都用枚举代表某一个数值，数据库存储某个值。  
+同时我们也希望和前端交互用数值交互，而不是string名称。因此用到这个工具类  
+支持以下几个组件的反序列化和序列化
+* spring convert  
+  @RequestParam  
+  @RequestPath
+  ...  
+  
+* jackson  
+  @ResponseBody
+  
+* fastjson  
+  JSON.parseObject(...)
+  
+
+# 代码
+
+```java
+public class EnumDeserializerConfig {
+
+
+    /**
+     * 可反序列化的枚举
+     */
+    public enum DeserializableEnum {
+        I_Enum(IEnum.class, IEnum::getIdentity, IEnum::getDoc),
+        I_Enums(IEnums.class, IEnums::getIdentities, IEnums::getDoc),
+        ;
+
+
+        private final Class<?> serializableClass;
+        private final Function<Object, Serializable> getIdentityFunction;
+        private final Function<Object, String> getDocFunction;
+
+        <T> DeserializableEnum(Class<T> serializableClass, Function<T, Serializable> getIdentityFunction, Function<T, String> getDocFunction) {
+            this.serializableClass = serializableClass;
+            this.getIdentityFunction = (Function<Object, Serializable>) getIdentityFunction;
+            this.getDocFunction = (Function<Object, String>) getDocFunction;
+        }
+
+      /**
+       * 判断class是否可以进行反序列化
+       */
+        public static Optional<DeserializableEnum> getDeserializableEnum(Class<?> enumClass) {
+            if (enumClass == null) {
+                return Optional.empty();
+            }
+            if (!enumClass.isEnum()) {
+                return Optional.empty();
+            }
+            for (DeserializableEnum deserializableEnum : DeserializableEnum.values()) {
+                if (deserializableEnum.serializableClass.isAssignableFrom(enumClass)) {
+                    return Optional.of(deserializableEnum);
+                }
+            }
+            return Optional.empty();
+        }
+
+        /**
+         * 进行反序列化
+         */
+        private Enum<?> deserializeEnum(Class<Enum<?>> enumClass, Object rawValue) {
+            for (Enum<?> enumConstant : enumClass.getEnumConstants()) {
+                Serializable identity = this.getGetIdentityFunction.apply(enumConstant);
+                if (Objects.equals(identity, rawValue)) {
+                    return enumConstant;
+                }
+                if (identity instanceof Object[]) {
+                    for (Object i : (Object[]) identity) {
+                        if (Objects.equals(i, rawValue)) {
+                            return enumConstant;
+                        }
+                    }
+                }
+            }
+
+            // 最后值为空则返回null
+            if (rawValue == null || StringUtils.isBlank(rawValue.toString())) {
+                return null;
+            }
+
+            // 转换失败一律抛异常，后期可根据注解进行动态的抛异常
+            throw new EnumDeserializeException(MessageFormat.format("参数错误，无法匹配对应的类型,value:{0}, type:{1}", rawValue, enumClass.getSimpleName()));
+        }
+    }
+
+    /**
+     * 定义一个常量为spring converter 组件
+     */
+    public static final GenericConverter ENUM_DESERIALIZER_CONVERTER = new GenericConverter() {
+        @Override
+        public Set<ConvertiblePair> getConvertibleTypes() {
+            Set<ConvertiblePair> cpSet = Sets.newHashSet();
+            for (DeserializableEnum deserializableEnum : DeserializableEnum.values()) {
+                /* convert匹配逻辑：
+                 先循环 sourceType 水平class
+                 然后内嵌 targetType 水平class 进行内嵌循环
+                 找对对应的ConvertiblePair为止
+                 所以sourceType必须比较精确不然覆盖不了defaultConvertor
+                 */
+                cpSet.add(new ConvertiblePair(String.class, deserializableEnum.serializableClass));
+                cpSet.add(new ConvertiblePair(Number.class, deserializableEnum.serializableClass));
+            }
+            return cpSet;
+        }
+
+        @Override
+        public Object convert(Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
+            ResolvableType targetResolvableType = targetType.getResolvableType();
+            Class<?> valueRawClass = getValueRawClass(targetResolvableType);
+            if (valueRawClass == null) {
+                return source;
+            }
+            Class<Enum<?>> enumClass = (Class<Enum<?>>) targetResolvableType.getRawClass();
+
+            DeserializableEnum deserializableEnum = DeserializableEnum.getDeserializableEnum(enumClass).orElse(null);
+            if (deserializableEnum == null) {
+                return source;
+            }
+            // 把source转换成枚举真实值的类型
+            Object rawValue = DefaultConversionService.getSharedInstance().convert(source, valueRawClass);
+            return deserializableEnum.deserializeEnum(enumClass, rawValue);
+        }
+    };
+
+    /**
+     * 定义一个常量为jacksonModule 组件
+     */
+    public static final SimpleModule ENUM_MODULE = new SimpleModule() {
+        @Override
+        public void setupModule(SetupContext context) {
+            // 枚举序列化，spring默认的序列化为jackson
+            context.addSerializers(new Serializers.Base() {
+                @Override
+                public JsonSerializer<?> findSerializer(SerializationConfig config, JavaType type, BeanDescription beanDesc) {
+                    return DeserializableEnum.getDeserializableEnum(type.getRawClass())
+                            .map(deserializableEnum -> new JsonSerializer<Enum<?>>() {
+                                @Override
+                                public void serialize(Enum<?> o, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+                                    jsonGenerator.writeObject(deserializableEnum.getGetIdentityFunction().apply(o));
+                                }
+                            }).orElse(null);
+                }
+            });
+
+            // 添加枚举反序列化
+            context.addDeserializers(new Deserializers.Base() {
+                @Override
+                public JsonDeserializer<?> findEnumDeserializer(Class<?> type, DeserializationConfig config, BeanDescription beanDesc) {
+                    Class<?> valueRawClass = getValueRawClass(ResolvableType.forClass(type));
+                    if (valueRawClass == null) {
+                        return null;
+                    }
+
+                    return DeserializableEnum.getDeserializableEnum(type)
+                            .map(deserializableEnum -> new JsonDeserializer<Enum<?>>() {
+                                @Override
+                                public Enum<?> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+                                    Object value = DefaultConversionService.getSharedInstance().convert(jsonParser.getValueAsString(), valueRawClass);
+                                    return deserializableEnum.deserializeEnum((Class<Enum<?>>) type, value);
+                                }
+                            }).orElse(null);
+
+                }
+            });
+        }
+
+    };
+
+
+    /*
+     * 定义一个常量为fastJson 组件
+     */
+    public static final Module FASTJSON_MODULE = new Module() {
+        @Override
+        public ObjectDeserializer createDeserializer(ParserConfig config, Class type) {
+            Class<?> valueRawClass = getValueRawClass(ResolvableType.forClass(type));
+            if (valueRawClass == null) {
+                return null;
+            }
+
+            return DeserializableEnum.getDeserializableEnum(type)
+                    .map(deserializableEnum -> new ObjectDeserializer() {
+                        @Override
+                        public <T> T deserialze(DefaultJSONParser parser, Type type, Object fieldName) {
+                            Object value = parser.parse();
+
+                            Object rawValue = DefaultConversionService.getSharedInstance().convert(value, valueRawClass);
+                            return (T) deserializableEnum.deserializeEnum((Class<Enum<?>>) type, rawValue);
+                        }
+
+                        public int getFastMatchToken() {
+                            return JSONToken.LITERAL_STRING;
+                        }
+                    }).orElse(null);
+
+        }
+
+        @Override
+        public ObjectSerializer createSerializer(SerializeConfig config, Class type) {
+            return null;
+        }
+    };
+
+    /**
+     * 获取接口上的泛型
+     */
+    public static Class<?> getValueRawClass(ResolvableType realClassResolvedType) {
+        ResolvableType[] enumInterfaces = realClassResolvedType.getInterfaces();
+        if (ArrayUtils.isEmpty(enumInterfaces)) {
+            return null;
+        }
+        ResolvableType valueResolvableType = enumInterfaces[0].getGeneric(0);
+        if (valueResolvableType == ResolvableType.NONE) {
+            return null;
+        }
+        return valueResolvableType.getRawClass();
+    }
+
+
+    public static class EnumDeserializeException extends RuntimeException {
+
+        public EnumDeserializeException(String message) {
+            super(message);
+        }
+    }
+
+}
+```
+
+# 使用方式
+
+可以看到我们在一个类(EnumDeserializerConfig)里面定义了3个常量、一个枚举类、一个异常类、以及一个static获取接口上泛型的方法。  
+3个常量分表代表3个组件，按需添加。  
+一个枚举代表枚举的接口，以及获取identity的方法，还有获取doc(文档)的方法。
+
+## springConverter组件的使用
+spring 接收参数为form表单请求时，默认用的converter组件进行转换对象
+```java
+@Configuration
+public class AddEnumConverter implements WebMvcConfigurer {
+
+  @Override
+  public void addFormatters(FormatterRegistry registry) {
+    registry.addConverter(EnumDeserializerConfig.ENUM_DESERIALIZER_CONVERTER);
+  }
+}
+```
+
+
+## jackson序列化和反序列化的使用
+spring的@RequestBody,@ResponseBody 默认使用jackson进行反序列化和序列化
+
+```java
+@Configuration
+public class AddEnumJacksonModule implements WebMvcConfigurer {
+
+  @Override
+  public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+
+    for (HttpMessageConverter<?> converter : converters) {
+      if (!(converter instanceof MappingJackson2HttpMessageConverter)) {
+        continue;
+      }
+      // 枚举反序列化
+      ((MappingJackson2HttpMessageConverter) converter).getObjectMapper()
+              .registerModule(EnumDeserializerConfig.ENUM_MODULE);
+    }
+  }
+}
+```
+
+## fastJson的反序列化使用
+```java
+ParserConfig.getGlobalInstance().register(EnumDeserializerConfig.FASTJSON_MODULE);
+```

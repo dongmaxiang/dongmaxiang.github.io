@@ -4,6 +4,7 @@ title: 通用枚举
 date: 2021-07-02 15:15:00.000000000 +08:00
 categories: [java,工具类]
 tags: [java,开发工具类,枚举]
+permalink: /通用枚举
 ---
 
 # 使用场景
@@ -52,7 +53,6 @@ import java.util.Optional;
  * 可以有多个标识的枚举
  *
  * @author anyOne
- * @since 2021/5/12 2:32 PM
  */
 public interface IEnums<T extends Serializable> {
 
@@ -103,19 +103,12 @@ public class ObjectUtils extends org.apache.commons.lang3.ObjectUtils {
 }
 ```  
 
-* 代码复用、最终还是调用[一个枚举对应多个标识](#一个枚举对应多个标识)那个工具类  
+* 代码复用、继承即可，最终还是调用[一个枚举对应多个标识](#一个枚举对应多个标识)那个工具类  
     ```java
     import ObjectUtils;
     import java.io.Serializable;
     import java.util.Optional;
     
-    /**
-     * IdentityIEnum
-     * 只能有一个标识的枚举
-     *
-     * @author anyOne
-     * @since 2021/5/12 2:32 PM
-     */
     public interface IEnum<T extends Serializable> extends IEnums<T> {
     
         /**
@@ -125,22 +118,8 @@ public class ObjectUtils extends org.apache.commons.lang3.ObjectUtils {
   
         // 默认实现获取多个标识 
         default T[] getIdentities() {
-            // @see getIdentity 调用获取单个标识，然后通过util变成一个数组。
             return ObjectUtils.array(getIdentity());
         }
-    
-        static <T extends Serializable, E extends IEnum<T>> E mustGetEnum(Class<E> enumClass, T identity) {
-            return IEnums.mustGetEnum(enumClass, identity);
-        }
-    
-        static <T extends Serializable, E extends IEnum<T>> Optional<E> getEnum(Class<E> enumClass, T identity) {
-            return IEnums.getEnum(enumClass, identity);
-        }
-    
-        static <T extends Serializable, E extends IEnum<T>> E getEnum(Class<E> enumClass, T identity, E defaultValue) {
-            return IEnums.getEnum(enumClass, identity, defaultValue);
-        }
-    
     }
     ```  
 
@@ -177,4 +156,37 @@ ENV env = IEnums.getEnum(ENV.class, "dev", RELEASE);
 ENV test1 = IEnums.getEnum(ENV.class, "test1", RELEASE);
 ENV test2 = IEnums.getEnum(ENV.class, "test2", RELEASE);
 assert test1 == test2;
+```
+
+
+
+
+## 使用方式之二
+
+* 工具类
+```java
+public enum UserType implements IEnum<Integer> {
+
+  NEW_USER(1, "新用户"),
+
+  OLD_USER(0, "老用户");
+  public final int code;
+
+  public final String doc;
+
+  NewUserFlag(int code, String doc) {
+    this.code = code;
+    this.doc = doc;
+  }
+
+  @Override
+  public Integer getValue() {
+    return code;
+  }
+}
+```
+
+* 使用详情
+```java
+Optional<UserType> type = IEnums.getEnum(UserType.class, 1);
 ```
