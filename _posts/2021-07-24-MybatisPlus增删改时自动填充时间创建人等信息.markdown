@@ -4,12 +4,21 @@ title: MybatisPlus增删改时自动填充时间创建人等信息
 permalink: /MybatisPlus增删改时自动填充时间创建人等信息
 date: 2021-07-24 21:38:00 +08:00
 categories: [java,mybatis]
-tags: [开发工具类,mybatis]
+tags: [效率,mybatis]
 ---
+
+# 背景
+自动填充是个好东西，可以帮助我们省去一些开发时间，只专注于业务的本身。  
+mybatisPlus使用自动填充更简单只需要注解  
+`@TableField(fill = FieldFill.INSERT)`或者`@TableField(fill = FieldFill.UPDATE)`  
+FieldFill.INSERT对应insertFill填充逻辑  
+FieldFill.UPDATE对应updateFill填充逻辑
 
 # 代码
 
-注意重写了`strictFill`方法
+注意重写了`strictFill`方法  
+填充的值和类型基本都一样。所以第三个参数为null，不作类型判断，如果类型不匹配set会直接报错。  
+项目嘛，就应该有统一的规范，按照规范来，不按照规范就直接报错，省去了代码review的时间
 ```java
 @Component
 public class FieldAutoFillHandler implements MetaObjectHandler {
@@ -70,7 +79,8 @@ public class FieldAutoFillHandler implements MetaObjectHandler {
 
 ## MybatisPlus的参数处理程序
 * 最终调用了`process`方法，间接调用了`insertFill`或者`updateFill`
-* 看得出来局限了吗？只能针对实体进行填充
+* 看得出来局限了吗？只能针对实体进行填充  
+[软删除填充字段]({{ "/MybatisPlus软删除填充字段" | relative_url }})
 ```java
 public class MybatisDefaultParameterHandler extends DefaultParameterHandler {
 

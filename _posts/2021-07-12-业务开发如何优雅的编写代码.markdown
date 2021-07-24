@@ -25,7 +25,8 @@ tags: [效率]
 [springMvc枚举序列化和反序列化]({{ "/mvc枚举序列化和反序列化的配置" | relative_url }})
 ## 重新加装Mybatis-plus(业务开发必备)
 [MybatisPlus增删改时自动填充时间创建人等信息]({{ "/MybatisPlus增删改时自动填充时间创建人等信息" | relative_url }})  
-[MybatisPlus软删除填充字段]()  
+[MybatisPlus软删除填充字段]({{ "/MybatisPlus软删除填充字段" | relative_url }})  
+[MybatisPlus避免空指针，避免字符串编程]({{ "/MybatisPlus加装Manager" | relative_url }})  
 [MybatisPlus针对Saas系统的多租户插件]()  
 ## 定义代码校验（协作开发必备）
 [应用业务代码应该如何分层]()  
