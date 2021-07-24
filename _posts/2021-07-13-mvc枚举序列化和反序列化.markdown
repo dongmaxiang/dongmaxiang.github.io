@@ -1,6 +1,6 @@
 ---
 layout: post
-title: mvc枚举序列化和反序列化
+title: mvc枚举序列化和反序列化的配置
 permalink: /mvc枚举序列化和反序列化的配置
 date: 2021-07-13 10:49:00.000000000 +08:00
 categories: [java,枚举]
