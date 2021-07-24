@@ -20,7 +20,7 @@ public class EnumDeserializerConfig {
      */
     public enum DeserializableEnum {
         // DBEnum类是单独的一个包，也是枚举的一个通用接口
-        DB_Enum(DBEnum.class, DBEnum::getValue, IEnum::getDoc),
+        DB_Enum(DBEnum.class, DBEnum::getValue, DB_Enum::getDoc),
         // 一个枚举对应单个标识
         I_Enum(IEnum.class, IEnum::getIdentity, IEnum::getDoc),
         // 一个枚举对应多个标识
