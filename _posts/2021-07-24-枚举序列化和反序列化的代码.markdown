@@ -1,0 +1,514 @@
+---
+layout: post
+title: 枚举序列化和反序列化的代码
+permalink: /枚举序列化和反序列化的代码
+date: 2021-07-24 20:20:00.000000000 +08:00
+categories: [java,枚举]
+tags: [开发工具类,序列化,反序列化,枚举]
+---
+
+# 必须用到的枚举工具类
+* 参考通用枚举 [通用枚举]({{ "/通用枚举" | relative_url }})
+
+# 代码（最初版本）
+
+```java
+public class EnumDeserializerConfig {
+    
+    /**
+     * 可反序列化的枚举
+     */
+    public enum DeserializableEnum {
+        // DBEnum类是单独的一个包，也是枚举的一个通用接口
+        DB_Enum(DBEnum.class, DBEnum::getValue, IEnum::getDoc),
+        // 一个枚举对应单个标识
+        I_Enum(IEnum.class, IEnum::getIdentity, IEnum::getDoc),
+        // 一个枚举对应多个标识
+        I_Enums(IEnums.class, IEnums::getIdentities, IEnums::getDoc),
+        ;
+
+        private final Class<?> serializableClass;
+        private final Function<Object, Serializable> getIdentityFunction;
+        private final Function<Object, String> getDocFunction;
+
+        <T> DeserializableEnum(Class<T> serializableClass, Function<T, Serializable> getIdentityFunction, Function<T, String> getDocFunction) {
+            this.serializableClass = serializableClass;
+            this.getIdentityFunction = (Function<Object, Serializable>) getIdentityFunction;
+            this.getDocFunction = (Function<Object, String>) getDocFunction;
+        }
+
+      /**
+       * 判断class是否可以进行反序列化
+       */
+        public static Optional<DeserializableEnum> getDeserializableEnum(Class<?> enumClass) {
+            if (enumClass == null) {
+                return Optional.empty();
+            }
+            if (!enumClass.isEnum()) {
+                return Optional.empty();
+            }
+            for (DeserializableEnum deserializableEnum : DeserializableEnum.values()) {
+                if (deserializableEnum.serializableClass.isAssignableFrom(enumClass)) {
+                    return Optional.of(deserializableEnum);
+                }
+            }
+            return Optional.empty();
+        }
+
+        /**
+         * 进行反序列化
+         */
+        private Enum<?> deserializeEnum(Class<Enum<?>> enumClass, Object rawValue) {
+            for (Enum<?> enumConstant : enumClass.getEnumConstants()) {
+                Serializable identity = this.getGetIdentityFunction.apply(enumConstant);
+                if (Objects.equals(identity, rawValue)) {
+                    return enumConstant;
+                }
+                if (identity instanceof Object[]) {
+                    for (Object i : (Object[]) identity) {
+                        if (Objects.equals(i, rawValue)) {
+                            return enumConstant;
+                        }
+                    }
+                }
+            }
+
+            // 最后值为空则返回null
+            if (rawValue == null || StringUtils.isBlank(rawValue.toString())) {
+                return null;
+            }
+
+            // 转换失败一律抛异常，后期可根据注解进行动态的抛异常
+            throw new EnumDeserializeException(MessageFormat.format("参数错误，无法匹配对应的类型,value:{0}, type:{1}", rawValue, enumClass.getSimpleName()));
+        }
+    }
+
+    /**
+     * 定义一个常量为spring converter 组件
+     */
+    public static final GenericConverter ENUM_DESERIALIZER_CONVERTER = new GenericConverter() {
+        @Override
+        public Set<ConvertiblePair> getConvertibleTypes() {
+            Set<ConvertiblePair> cpSet = Sets.newHashSet();
+            for (DeserializableEnum deserializableEnum : DeserializableEnum.values()) {
+                /* convert匹配逻辑：
+                 先循环 sourceType 水平class
+                 然后内嵌 targetType 水平class 进行内嵌循环
+                 找对对应的ConvertiblePair为止
+                 所以sourceType必须比较精确不然覆盖不了defaultConvertor
+                 */
+                cpSet.add(new ConvertiblePair(String.class, deserializableEnum.serializableClass));
+                cpSet.add(new ConvertiblePair(Number.class, deserializableEnum.serializableClass));
+            }
+            return cpSet;
+        }
+
+        @Override
+        public Object convert(Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
+            ResolvableType targetResolvableType = targetType.getResolvableType();
+            Class<?> valueRawClass = getValueRawClass(targetResolvableType);
+            if (valueRawClass == null) {
+                return source;
+            }
+            Class<Enum<?>> enumClass = (Class<Enum<?>>) targetResolvableType.getRawClass();
+
+            DeserializableEnum deserializableEnum = DeserializableEnum.getDeserializableEnum(enumClass).orElse(null);
+            if (deserializableEnum == null) {
+                return source;
+            }
+            // 把source转换成枚举真实值的类型
+            Object rawValue = DefaultConversionService.getSharedInstance().convert(source, valueRawClass);
+            return deserializableEnum.deserializeEnum(enumClass, rawValue);
+        }
+    };
+
+    /**
+     * 定义一个常量为jacksonModule 组件
+     */
+    public static final SimpleModule ENUM_MODULE = new SimpleModule() {
+        @Override
+        public void setupModule(SetupContext context) {
+
+            // 添加枚举反序列化
+            context.addDeserializers(new Deserializers.Base() {
+                @Override
+                public JsonDeserializer<?> findEnumDeserializer(Class<?> type, DeserializationConfig config, BeanDescription beanDesc) {
+                    Class<?> valueRawClass = getValueRawClass(ResolvableType.forClass(type));
+                    if (valueRawClass == null) {
+                        return null;
+                    }
+
+                    return DeserializableEnum.getDeserializableEnum(type)
+                            .map(deserializableEnum -> new JsonDeserializer<Enum<?>>() {
+                                @Override
+                                public Enum<?> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+                                    Object value = DefaultConversionService.getSharedInstance().convert(jsonParser.getValueAsString(), valueRawClass);
+                                    return deserializableEnum.deserializeEnum((Class<Enum<?>>) type, value);
+                                }
+                            }).orElse(null);
+
+                }
+            });
+        }
+
+    };
+
+
+    /*
+     * 定义一个常量为fastJson 组件
+     */
+    public static final Module FASTJSON_MODULE = new Module() {
+        @Override
+        public ObjectDeserializer createDeserializer(ParserConfig config, Class type) {
+            Class<?> valueRawClass = getValueRawClass(ResolvableType.forClass(type));
+            if (valueRawClass == null) {
+                return null;
+            }
+
+            return DeserializableEnum.getDeserializableEnum(type)
+                    .map(deserializableEnum -> new ObjectDeserializer() {
+                        @Override
+                        public <T> T deserialze(DefaultJSONParser parser, Type type, Object fieldName) {
+                            Object value = parser.parse();
+
+                            Object rawValue = DefaultConversionService.getSharedInstance().convert(value, valueRawClass);
+                            return (T) deserializableEnum.deserializeEnum((Class<Enum<?>>) type, rawValue);
+                        }
+
+                        public int getFastMatchToken() {
+                            return JSONToken.LITERAL_STRING;
+                        }
+                    }).orElse(null);
+
+        }
+
+        @Override
+        public ObjectSerializer createSerializer(SerializeConfig config, Class type) {
+            return null;
+        }
+    };
+
+    /**
+     * 获取接口上的泛型
+     */
+    public static Class<?> getValueRawClass(ResolvableType realClassResolvedType) {
+        ResolvableType[] enumInterfaces = realClassResolvedType.getInterfaces();
+        if (ArrayUtils.isEmpty(enumInterfaces)) {
+            return null;
+        }
+        ResolvableType valueResolvableType = enumInterfaces[0].getGeneric(0);
+        if (valueResolvableType == ResolvableType.NONE) {
+            return null;
+        }
+        return valueResolvableType.getRawClass();
+    }
+
+
+    public static class EnumDeserializeException extends RuntimeException {
+
+        public EnumDeserializeException(String message) {
+            super(message);
+        }
+    }
+
+}
+```
+
+## 缺陷
+1：目前不支持序列化😝  
+2：获取枚举identity类型的方法比较愚钝，一刀切了  
+> 如果是间接实现的枚举或者泛型的位置不在第一个位置，那就有问题喽。  
+
+3：反序列化和序列化只能单层序列和反序列，什么意思呢？
+> 枚举的标识可以反向查找枚举对吧？如果枚举的标识还是一个枚举呢？目前只支持序列化和反序列化最外一层的value。太抽象？
+
+* 用户类型1  
+```java
+public enum UserType1 implements IEnum<Integer> {
+
+  NEW_USER(1, "新用户"),
+
+  OLD_USER(0, "老用户");
+  public final int code;
+
+  public final String doc;
+
+  UserType1(int code, String doc) {
+    this.code = code;
+    this.doc = doc;
+  }
+
+  @Override
+  public Integer getIdentity() {
+    return code;
+  }
+}
+```
+
+* 用户类型2  
+```java
+public enum UserType2 implements IEnum<UserType1> {
+
+  NEW_USER(UserType1.NEW_USER, "新用户2"),
+
+  OLD_USER(UserType1.OLD_USER, "旧用户2");
+  
+  public final UserType1 userType1;
+
+  public final String doc;
+
+  UserType2(UserType1 userType1, String doc) {
+    this.userType1 = userType1;
+    this.doc = doc;
+  }
+
+  /**
+   * 当前枚举的标识是userType1枚举类型
+   */
+  @Override
+  public UserType1 getIdentity() {
+    return userType1;
+  }
+
+  @Override
+  public String getDoc() {
+    return doc;
+  }
+}
+```
+如果用UserType2枚举的话，反序列化或者序列化就会出现缺陷。因为不支持内嵌套一个枚举当做当前枚举的标识。  
+所以有了以下的新代码。
+
+# 代码（新版本）
+* 支持序列化啦
+* 支持枚举内嵌的标识序列化和反序列化
+* 更精准的获取泛型上的标识
+
+```java
+@Slf4j
+public class EnumDeserializerConfig {
+
+
+    /**
+     * 可反序列化的枚举
+     */
+    public enum DeserializableEnum {
+        DB_Enum(DBEnum.class, 0, DBEnum::getValue, DBEnum::getDoc),
+        I_Enum(IEnum.class, 0, IEnum::getIdentity, IEnum::getDoc),
+        I_Enums(IEnums.class, 0, IEnums::getIdentities, IEnums::getDoc),
+        ;
+
+        // 可反序列化枚举的接口
+        public final Class<?> serializableClass;
+        // 接口对应的identity(枚举的标识)泛型的下标
+        private final int identityGenericIndex;
+        // 获取枚举的identity
+        private final Function<Enum<?>, Serializable> getIdentityFunction;
+        // 获取枚举的doc(文档)
+        public final Function<Enum<?>, String> getDocFunction;
+
+        <T> DeserializableEnum(Class<T> serializableClass, int identityGenericIndex, Function<T, Serializable> getIdentityFunction, Function<T, String> getDocFunction) {
+            this.serializableClass = serializableClass;
+            this.identityGenericIndex = identityGenericIndex;
+            this.getIdentityFunction = (Function<Enum<?>, Serializable>) getIdentityFunction;
+            this.getDocFunction = (Function<Enum<?>, String>) getDocFunction;
+        }
+
+        /**
+         * 进行反序列化
+         */
+        private Enum<?> deserializeEnum(Class<Enum<?>> enumClass, Object rawValue) {
+            for (Enum<?> enumConstant : enumClass.getEnumConstants()) {
+                Object identity = getIdentity(enumConstant);
+                if (identity instanceof Object[]) {
+                    for (Object i : (Object[]) identity) {
+                        if (Objects.equals(i, rawValue)) {
+                            return enumConstant;
+                        }
+                    }
+                } else {
+                    if (Objects.equals(identity, rawValue)) {
+                        return enumConstant;
+                    }
+                }
+            }
+
+            // 最后值为空则返回null
+            if (rawValue == null || StringUtils.isBlank(rawValue.toString())) {
+                return null;
+            }
+
+            // 转换失败一律抛异常，后期可根据注解进行动态的抛异常
+            throw new EnumDeserializeException(MessageFormat.format("参数错误，无法匹配对应的类型,value:{0}, type:{1}", rawValue, enumClass.getSimpleName()));
+        }
+        
+        public Object getIdentity(Enum<?> enumConstant) {
+            Serializable identity = this.getIdentityFunction.apply(enumConstant);
+            if (identity == null) {
+                return null;
+            }
+            Class<?> identityType;
+            if (identity instanceof Object[]) {
+                identityType = identity.getClass().getComponentType();
+            } else {
+                identityType = identity.getClass();
+            }
+
+            // 递归判断
+            DeserializableEnum deserializableEnum = getDeserializableEnumAndIdentityClass(identityType)
+                    .map(Map.Entry::getKey)
+                    .orElse(null);
+
+            if (deserializableEnum == null || !(identity instanceof Enum<?>)) {
+                return identity;
+            }
+            return deserializableEnum.getIdentity((Enum<?>) identity);
+        }
+
+        /**
+         * 获取接口上标识枚举值的类型
+         */
+        private Class<?> getValueRawClass(Class<?> serializableClass) {
+            ResolvableType resolvableType = ResolvableType.forClass(serializableClass).as(this.serializableClass);
+            Class<?> valueRawClass = resolvableType.getGeneric(this.identityGenericIndex).resolve();
+            // 判断递归获取
+            DeserializableEnum deserializableEnum = DeserializableEnum.getDeserializableEnumAndIdentityClass(valueRawClass)
+                    .map(Map.Entry::getKey)
+                    .orElse(null);
+
+            if (deserializableEnum == null) {
+                return valueRawClass;
+            }
+
+            return deserializableEnum.getValueRawClass(valueRawClass);
+        }
+
+        public static Optional<Map.Entry<DeserializableEnum, Class<?>>> getDeserializableEnumAndIdentityClass(Class<?> enumClass) {
+            if (enumClass == null) {
+                return Optional.empty();
+            }
+            if (!enumClass.isEnum()) {
+                return Optional.empty();
+            }
+            for (DeserializableEnum deserializableEnum : DeserializableEnum.values()) {
+                if (deserializableEnum.serializableClass.isAssignableFrom(enumClass)) {
+                    Class<?> identityValueRawClass = deserializableEnum.getValueRawClass(enumClass);
+                    return Optional.of(Pair.of(deserializableEnum, identityValueRawClass));
+                }
+            }
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * spring converter反序列化
+     */
+    public static final GenericConverter ENUM_DESERIALIZER_CONVERTER = new GenericConverter() {
+        @Override
+        public Set<ConvertiblePair> getConvertibleTypes() {
+            Set<ConvertiblePair> cpSet = Sets.newHashSet();
+            for (DeserializableEnum deserializableEnum : DeserializableEnum.values()) {
+                /* 匹配逻辑：
+                 先循环 sourceType 水平class
+                 然后内嵌 targetType 水平class 进行内嵌循环
+                 找对对应的ConvertiblePair为止
+                 所以sourceType必须比较精确不然覆盖不了defaultConvertor
+                 */
+                cpSet.add(new ConvertiblePair(String.class, deserializableEnum.serializableClass));
+                cpSet.add(new ConvertiblePair(Number.class, deserializableEnum.serializableClass));
+            }
+            return cpSet;
+        }
+
+        @Override
+        public Object convert(Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
+            Class<?> targetClass = targetType.getResolvableType().getRawClass();
+
+            return DeserializableEnum.getDeserializableEnumAndIdentityClass(targetClass)
+                    .map((Function<Map.Entry<DeserializableEnum, Class<?>>, Object>) entry -> {
+                        Object rawValue = DefaultConversionService.getSharedInstance().convert(source, entry.getValue());
+                        return entry.getKey().deserializeEnum((Class<Enum<?>>) targetClass, rawValue);
+                    }).orElse(null);
+        }
+    };
+
+    /**
+     * jacksonModule序列化和反序列化
+     */
+    public static final SimpleModule ENUM_MODULE = new SimpleModule() {
+        @Override
+        public void setupModule(SetupContext context) {
+            context.addSerializers(new Serializers.Base() {
+                @Override
+                public JsonSerializer<?> findSerializer(SerializationConfig config, JavaType type, BeanDescription beanDesc) {
+                    return DeserializableEnum.getDeserializableEnumAndIdentityClass(type.getRawClass())
+                            .map(Map.Entry::getKey)
+                            .map(deserializableEnum -> new JsonSerializer<Enum<?>>() {
+                                @Override
+                                public void serialize(Enum<?> o, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+                                    jsonGenerator.writeObject(deserializableEnum.getIdentity(o));
+                                }
+                            }).orElse(null);
+                }
+            });
+
+            context.addDeserializers(new Deserializers.Base() {
+                @Override
+                public JsonDeserializer<?> findEnumDeserializer(Class<?> type, DeserializationConfig config, BeanDescription beanDesc) {
+                    return DeserializableEnum.getDeserializableEnumAndIdentityClass(type)
+                            .map(entry -> new JsonDeserializer<Enum<?>>() {
+                                public Enum<?> deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+                                    Object value = DefaultConversionService.getSharedInstance().convert(jsonParser.getValueAsString(), entry.getValue());
+                                    return entry.getKey().deserializeEnum((Class<Enum<?>>) type, value);
+                                }
+                            }).orElse(null);
+                }
+            });
+        }
+
+    };
+
+
+    /*
+     * fastJson 枚举序列化和反序列化
+     */
+    public static final Module FASTJSON_MODULE = new Module() {
+        @Override
+        public ObjectDeserializer createDeserializer(ParserConfig config, Class type) {
+            return DeserializableEnum.getDeserializableEnumAndIdentityClass(type)
+                    .map(entry -> new ObjectDeserializer() {
+                        @Override
+                        public <T> T deserialze(DefaultJSONParser parser, Type type, Object fieldName) {
+                            Object rawValue = DefaultConversionService.getSharedInstance().convert(parser.parse(), entry.getValue());
+                            return (T) entry.getKey().deserializeEnum((Class<Enum<?>>) type, rawValue);
+                        }
+
+                        @Override
+                        public int getFastMatchToken() {
+                            return JSONToken.LITERAL_STRING;
+                        }
+                    }).orElse(null);
+        }
+
+        @Override
+        public ObjectSerializer createSerializer(SerializeConfig config, Class type) {
+            return DeserializableEnum.getDeserializableEnumAndIdentityClass(type)
+                    .map(entry -> new ObjectSerializer() {
+                        @Override
+                        public void write(JSONSerializer serializer, Object object, Object fieldName, Type fieldType, int features) {
+                            serializer.write(entry.getKey().getIdentity((Enum<?>) object));
+                        }
+                    }).orElse(null);
+        }
+    };
+
+
+    public static class EnumDeserializeException extends RuntimeException {
+
+        public EnumDeserializeException(String message) {
+            super(message);
+        }
+    }
+
+}
+```

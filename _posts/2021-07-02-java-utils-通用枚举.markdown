@@ -61,6 +61,11 @@ public interface IEnums<T extends Serializable> {
     T[] getIdentities();
 
     /**
+     * 枚举对应的文档，描述
+     */
+    String getDoc();
+
+    /**
      * 传入指定的枚举class，和指定的identity(变量标识)
      * 如果枚举的identity和传入的相等则返回对应的枚举
      */
@@ -173,14 +178,19 @@ public enum UserType implements IEnum<Integer> {
 
   public final String doc;
 
-  NewUserFlag(int code, String doc) {
+  UserType(int code, String doc) {
     this.code = code;
     this.doc = doc;
   }
 
   @Override
-  public Integer getValue() {
+  public Integer getIdentity() {
     return code;
+  }
+
+  @Override
+  public String getDoc() {
+    return doc;
   }
 }
 ```

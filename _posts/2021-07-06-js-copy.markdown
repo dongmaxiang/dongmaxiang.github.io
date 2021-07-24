@@ -2,7 +2,7 @@
 layout: post
 title: js-copy
 date: 2021-07-06 14:24:00.000000000 +08:00
-categories: [js,工具类]
+categories: [js]
 tags: [js,开发工具类]
 ---
 
