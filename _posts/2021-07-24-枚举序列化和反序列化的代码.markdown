@@ -27,12 +27,12 @@ public class EnumDeserializerConfig {
         I_Enums(IEnums.class, IEnums::getIdentities, IEnums::getDoc),
         ;
 
-        private final Class<?> serializableClass;
+        private final Class<?> enumInterface;
         private final Function<Object, Serializable> getIdentityFunction;
         private final Function<Object, String> getDocFunction;
 
-        <T> DeserializableEnum(Class<T> serializableClass, Function<T, Serializable> getIdentityFunction, Function<T, String> getDocFunction) {
-            this.serializableClass = serializableClass;
+        <T> DeserializableEnum(Class<T> enumInterface, Function<T, Serializable> getIdentityFunction, Function<T, String> getDocFunction) {
+            this.enumInterface = enumInterface;
             this.getIdentityFunction = (Function<Object, Serializable>) getIdentityFunction;
             this.getDocFunction = (Function<Object, String>) getDocFunction;
         }
@@ -48,7 +48,7 @@ public class EnumDeserializerConfig {
                 return Optional.empty();
             }
             for (DeserializableEnum deserializableEnum : DeserializableEnum.values()) {
-                if (deserializableEnum.serializableClass.isAssignableFrom(enumClass)) {
+                if (deserializableEnum.enumInterface.isAssignableFrom(enumClass)) {
                     return Optional.of(deserializableEnum);
                 }
             }
@@ -97,8 +97,8 @@ public class EnumDeserializerConfig {
                  找对对应的ConvertiblePair为止
                  所以sourceType必须比较精确不然覆盖不了defaultConvertor
                  */
-                cpSet.add(new ConvertiblePair(String.class, deserializableEnum.serializableClass));
-                cpSet.add(new ConvertiblePair(Number.class, deserializableEnum.serializableClass));
+                cpSet.add(new ConvertiblePair(String.class, deserializableEnum.enumInterface));
+                cpSet.add(new ConvertiblePair(Number.class, deserializableEnum.enumInterface));
             }
             return cpSet;
         }
@@ -299,7 +299,7 @@ public class EnumDeserializerConfig {
         ;
 
         // 可反序列化枚举的接口
-        public final Class<?> serializableClass;
+        public final Class<?> enumInterface;
         // 接口对应的identity(枚举的标识)泛型的下标
         private final int identityGenericIndex;
         // 获取枚举的identity
@@ -307,8 +307,8 @@ public class EnumDeserializerConfig {
         // 获取枚举的doc(文档)
         public final Function<Enum<?>, String> getDocFunction;
 
-        <T> DeserializableEnum(Class<T> serializableClass, int identityGenericIndex, Function<T, Serializable> getIdentityFunction, Function<T, String> getDocFunction) {
-            this.serializableClass = serializableClass;
+        <T> DeserializableEnum(Class<T> enumInterface, int identityGenericIndex, Function<T, Serializable> getIdentityFunction, Function<T, String> getDocFunction) {
+            this.enumInterface = enumInterface;
             this.identityGenericIndex = identityGenericIndex;
             this.getIdentityFunction = (Function<Enum<?>, Serializable>) getIdentityFunction;
             this.getDocFunction = (Function<Enum<?>, String>) getDocFunction;
@@ -368,8 +368,8 @@ public class EnumDeserializerConfig {
         /**
          * 获取接口上标识枚举值的类型
          */
-        private Class<?> getValueRawClass(Class<?> serializableClass) {
-            ResolvableType resolvableType = ResolvableType.forClass(serializableClass).as(this.serializableClass);
+        private Class<?> getValueRawClass(Class<?> enumInterface) {
+            ResolvableType resolvableType = ResolvableType.forClass(enumInterface).as(this.enumInterface);
             Class<?> valueRawClass = resolvableType.getGeneric(this.identityGenericIndex).resolve();
             // 判断递归获取
             DeserializableEnum deserializableEnum = DeserializableEnum.getDeserializableEnumAndIdentityClass(valueRawClass)
@@ -391,7 +391,7 @@ public class EnumDeserializerConfig {
                 return Optional.empty();
             }
             for (DeserializableEnum deserializableEnum : DeserializableEnum.values()) {
-                if (deserializableEnum.serializableClass.isAssignableFrom(enumClass)) {
+                if (deserializableEnum.enumInterface.isAssignableFrom(enumClass)) {
                     Class<?> identityValueRawClass = deserializableEnum.getValueRawClass(enumClass);
                     return Optional.of(Pair.of(deserializableEnum, identityValueRawClass));
                 }
@@ -414,8 +414,8 @@ public class EnumDeserializerConfig {
                  找对对应的ConvertiblePair为止
                  所以sourceType必须比较精确不然覆盖不了defaultConvertor
                  */
-                cpSet.add(new ConvertiblePair(String.class, deserializableEnum.serializableClass));
-                cpSet.add(new ConvertiblePair(Number.class, deserializableEnum.serializableClass));
+                cpSet.add(new ConvertiblePair(String.class, deserializableEnum.enumInterface));
+                cpSet.add(new ConvertiblePair(Number.class, deserializableEnum.enumInterface));
             }
             return cpSet;
         }
