@@ -8,29 +8,15 @@ tags: [效率,mybatis]
 ---
 
 ## 背景
-mybatisPlus 使用`@TableLogic`注解表示当前表没有物理删除，只能根据当前注解的字段进行软删除  
-软删除时像正常调用删除的API即可。但是软删除并不会使字段填充器生效  
+mybatisPlus 使用`@TableLogic`注解在字段上，表示当前表软删除，当前字段为软删除字段
+软删除时像正常调用删除的API即可。但是软删除的缺点：并不会使字段填充器生效
 [字段填充器]({{ "/MybatisPlus增删改时自动填充时间创建人等信息" | relative_url }})  
-本文的目的就是批量软删除时可以使字段填充器生效，目前我用的3.3.2有单个的软删除使字段填充器生效，但是批量的没有
+本文的目的就是批量软删除时可以使字段填充器生效
+目前我用的3.3.2有单个的软删除使字段填充器生效，但是批量的没有
 
 ## 单个软删除的mybatisPlus源码
 
-* 单个软删除的AbstractMethod源码  
     ```java
-    
-    /**
-     * 根据 id 逻辑删除数据,并带字段填充功能
-     * <p>注意入参是 entity !!! ,如果字段没有自动填充,就只是单纯的逻辑删除</p>
-     * <p>
-     * 自己的通用 mapper 如下使用:
-     * <pre>
-     * int deleteByIdWithFill(T entity);
-     * </pre>
-     * </p>
-     *
-     * @author miemie
-     * @since 2018-11-09
-     */
     public class LogicDeleteByIdWithFill extends AbstractMethod {
     
         @Override
@@ -69,14 +55,8 @@ mybatisPlus 使用`@TableLogic`注解表示当前表没有物理删除，只能�
     ```
 
 ## 批量删除的mybatisPlus源码
-没有使字段填充器生效哦
+*没有使字段填充器生效哦*
 ```java
-/**
- * 根据 ID 集合删除
- *
- * @author hubin
- * @since 2018-04-06
- */
 public class DeleteBatchByIds extends AbstractMethod {
 
     @Override
