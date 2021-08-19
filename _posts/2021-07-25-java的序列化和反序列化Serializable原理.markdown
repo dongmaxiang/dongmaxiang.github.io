@@ -191,6 +191,7 @@ private void writeSerialData(Object obj, ObjectStreamClass desc)
         }
     }
 ```
+如果类中有writeReplace方法，则用调用，并且序列化的目标类为该方法的返回值
 * defaultWriteFields
 ```java
 private void defaultWriteFields(Object obj, ObjectStreamClass desc)
