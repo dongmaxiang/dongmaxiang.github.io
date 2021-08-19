@@ -1,7 +1,7 @@
 ---
 layout: post
 title: MybatisPlus批量软删除填充字段
-permalink: /MybatisPlus软删除填充字段
+permalink: /MybatisPlus批量软删除填充字段
 date: 2021-07-24 22:40:00 +08:00
 categories: [java,mybatis]
 tags: [效率,mybatis]

@@ -80,7 +80,7 @@ public class FieldAutoFillHandler implements MetaObjectHandler {
 ## MybatisPlus的参数处理程序
 * 最终调用了`process`方法，间接调用了`insertFill`或者`updateFill`
 * 看得出来局限了吗？只能针对实体进行填充  
-[软删除填充字段]({{ "/MybatisPlus软删除填充字段" | relative_url }})
+[软删除填充字段]({{ "/MybatisPlus批量软删除填充字段" | relative_url }})
 ```java
 public class MybatisDefaultParameterHandler extends DefaultParameterHandler {
 
