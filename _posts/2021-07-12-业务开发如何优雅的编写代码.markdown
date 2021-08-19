@@ -28,7 +28,7 @@ tags: [效率]
 
 ## 重新加装Mybatis-plus(业务开发必备)
 [重新加装MybatisPlus]({{ "/重新加装MybatisPlus" | relative_url }})
-[MybatisPlus针对Saas系统的动态多租户插件]()
+[MybatisPlus针对Saas系统的动态多租户插件]({{ "/MybatisPlus针对Saas系统的动态多租户插件" | relative_url }})
 
 ## 定义代码校验（协作开发必备）
 [应用业务代码应该如何分层]()  

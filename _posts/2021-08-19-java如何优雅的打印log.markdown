@@ -1,0 +1,33 @@
+---
+layout: post
+title: java如何优雅的打印log
+permalink: /java如何优雅的打印log
+date: 2021-08-19 23:16:01.000000000 +08:00
+categories: [java,log]
+tags: [log]
+---
+
+1 用sl4j（采用门面模式，不提供实现，且提供占位符打印的方式）  
+2 如果有字符串拼接或者toJSON的情况，打印log之前判断该级别是否开启，不然有性能的影响  
+3 对于第2点可优化的地方，用下面的util，这样配合着第1点，就不用写判断日志级别是否开启的代码了  
+```java
+/**
+ * 日志util。toString专用
+ */
+public abstract class ToString {
+
+    public static ToString lazyJson(Object object) {
+        return new ToString() {
+            String json = null;
+            @Override
+            public String toString() {
+                return json != null ? json : (json = JSON.toJSONString(object));
+            }
+        };
+    }
+}
+```
+例如：
+```java
+log.info("我要打印一个实体，想在开启info级别的情况下toJSON，还不想写if代码，实体：{}", ToString.lazyJson(实体));
+```
