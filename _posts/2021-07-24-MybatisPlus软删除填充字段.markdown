@@ -103,11 +103,7 @@ public class DeleteBatchByIds extends AbstractMethod {
 
 ## 分析
 * mybatisPlus在初始化的时候会给每个表添加通用的Statement映射
-* deleteByIdWithFill的软删除使字段填充器生效的映射就是以上的源码添加进去的
-* deleteByIdWithFill参数需要传递实体，所以映射的sql直接拼接上表实体对应的`@TableField(fill = FieldFill.UPDATE)`字段，即可使字段填充器在软删除时会生效
-* 批量删除deleteBatchIds目前只接受一个Constants.COLLECTION为key的一个集合参数,代表删除的主键.字段填充器在这里不起作用
-* 想要批量删除使字段填充器生效，必须传递实体，不然字段填充器往哪里填？
-* 批量删除需要接受两个参数，一个是实体，一个是idList集合，所以需要从新定义一个方法
+* 批量删除需要接受两个参数，一个是实体(不然字段填充器往哪里填？)，一个是idList集合，所以需要从新定义一个方法
 
 ## 自定义批量软删除的代码
 ```java
