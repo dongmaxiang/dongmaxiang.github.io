@@ -30,37 +30,95 @@ public static void main(String[] args) throws IOException {
 
 这样就会把对象序列化到指定的文件中，我们点开writeObject方法看源码一探究竟  
 ```java
-if ((obj = subs.lookup(obj)) == null) {
-    writeNull();
-    return;
-} else if (!unshared && (h = handles.lookup(obj)) != -1) {
-    writeHandle(h);
-    return;
-} else if (obj instanceof Class) {
-    writeClass((Class) obj, unshared);
-    return;
-} else if (obj instanceof ObjectStreamClass) {
-    writeClassDesc((ObjectStreamClass) obj, unshared);
-    return;
-}
+private void writeObject0(Object obj, boolean unshared)
+        throws IOException
+    {
+        boolean oldMode = bout.setBlockDataMode(false);
+        depth++;
+        try {
+            // handle previously written and non-replaceable objects
+            int h;
+            if ((obj = subs.lookup(obj)) == null) {
+                writeNull();
+                return;
+            } else if (!unshared && (h = handles.lookup(obj)) != -1) {
+                writeHandle(h);
+                return;
+            } else if (obj instanceof Class) {
+                writeClass((Class) obj, unshared);
+                return;
+            } else if (obj instanceof ObjectStreamClass) {
+                writeClassDesc((ObjectStreamClass) obj, unshared);
+                return;
+            }
 
-if (obj instanceof String) {
-    writeString((String) obj, unshared);
-} else if (cl.isArray()) {
-    writeArray(obj, desc, unshared);
-} else if (obj instanceof Enum) {
-    writeEnum((Enum<?>) obj, desc, unshared);
-} else if (obj instanceof Serializable) {
-    // 这里是重点，如果序列化的对象不是Serializable的实现类，else就会报错
-    writeOrdinaryObject(obj, desc, unshared);
-} else {
-    if (extendedDebugInfo) {
-        throw new NotSerializableException(
-            cl.getName() + "\n" + debugInfoStack.toString());
-    } else {
-        throw new NotSerializableException(cl.getName());
+            // check for replacement object
+            Object orig = obj;
+            Class<?> cl = obj.getClass();
+            ObjectStreamClass desc;
+            for (;;) {
+                // REMIND: skip this check for strings/arrays?
+                Class<?> repCl;
+                desc = ObjectStreamClass.lookup(cl, true);
+                // 如果有无参的writeReplace且返回值为Object类型的方法则会调用
+                if (!desc.hasWriteReplaceMethod() ||
+                    (obj = desc.invokeWriteReplace(obj)) == null ||
+                    (repCl = obj.getClass()) == cl)
+                {
+                    break;
+                }
+                cl = repCl;
+            }
+            if (enableReplace) {
+                Object rep = replaceObject(obj);
+                if (rep != obj && rep != null) {
+                    cl = rep.getClass();
+                    desc = ObjectStreamClass.lookup(cl, true);
+                }
+                obj = rep;
+            }
+
+            // if object replaced, run through original checks a second time
+            if (obj != orig) {
+                subs.assign(orig, obj);
+                if (obj == null) {
+                    writeNull();
+                    return;
+                } else if (!unshared && (h = handles.lookup(obj)) != -1) {
+                    writeHandle(h);
+                    return;
+                } else if (obj instanceof Class) {
+                    writeClass((Class) obj, unshared);
+                    return;
+                } else if (obj instanceof ObjectStreamClass) {
+                    writeClassDesc((ObjectStreamClass) obj, unshared);
+                    return;
+                }
+            }
+
+            // remaining cases
+            if (obj instanceof String) {
+                writeString((String) obj, unshared);
+            } else if (cl.isArray()) {
+                writeArray(obj, desc, unshared);
+            } else if (obj instanceof Enum) {
+                writeEnum((Enum<?>) obj, desc, unshared);
+            } else if (obj instanceof Serializable) {
+                // 这里是重点，如果序列化的对象不是Serializable的实现类，else就会报错
+                writeOrdinaryObject(obj, desc, unshared);
+            } else {
+                if (extendedDebugInfo) {
+                    throw new NotSerializableException(
+                        cl.getName() + "\n" + debugInfoStack.toString());
+                } else {
+                    throw new NotSerializableException(cl.getName());
+                }
+            }
+        } finally {
+            depth--;
+            bout.setBlockDataMode(oldMode);
+        }
     }
-}
 ```
 
 所以要想[反]序列化对象，类型必须是String\|array\|enum\|Serializable\|class，不然就会直接报错
