@@ -1,14 +1,15 @@
 ---
 layout: post
-title: 动态代理
+title: java动态代理
 date: 2021-07-1 18:58:55.000000000 +08:00
 categories: [java,动态代理]
 tags: [java,开发工具类]
+permalink: /java动态代理
 ---
 动态代理有很多使用的场景，比如  
 * springAOP切入
-* spring事务
-* 自定义业务场景
+* spring事务、缓存
+* 自定义业务场景等
 
 [本文的使用场景（点我）](#本文的使用场景)
 
@@ -40,6 +41,10 @@ public class DynamicProxy<T> implements MethodInterceptor {
     private final boolean ignoreObjectMethod;
     private final Object[] arguments;
     private CallBack<T> callBack;
+
+    public DynamicProxy(T proxyTarget, Object... arguments) {
+        this(proxyTarget, true, arguments);
+    }
 
     public DynamicProxy(T proxyTarget, boolean ignoreObjectMethod, Object... arguments) {
         this.target = proxyTarget;

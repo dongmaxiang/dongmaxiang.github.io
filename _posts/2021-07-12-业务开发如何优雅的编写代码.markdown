@@ -27,12 +27,8 @@ tags: [效率]
 定义好通用枚举之后也要配置好序列化和反序列化，使其结合起来  
 
 ## 重新加装Mybatis-plus(业务开发必备)
-[MybatisPlus增删改时自动填充时间创建人等信息]({{ "/MybatisPlus增删改时自动填充时间创建人等信息" | relative_url }})
-批量删除不支持字段填充器
-[MybatisPlus批量软删除并填充字段]({{ "/MybatisPlus批量软删除填充字段" | relative_url }})
-[MybatisPlus查询软删除的数据]({{ "/MybatisPlus查询软删除的数据" | relative_url }})
-[MybatisPlus避免空指针、无sql编码]({{ "/MybatisPlus加装service" | relative_url }})
-[MybatisPlus针对Saas系统的多租户插件]()
+[重新加装MybatisPlus]({{ "/重新加装MybatisPlus" | relative_url }})
+[MybatisPlus针对Saas系统的动态多租户插件]()
 
 ## 定义代码校验（协作开发必备）
 [应用业务代码应该如何分层]()  
