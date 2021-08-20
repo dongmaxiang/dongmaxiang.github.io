@@ -12,7 +12,9 @@ tags: [效率,序列化,反序列化,枚举,mvc]
 
 
 # 使用背景
-spring mvc 默认是根据枚举的名称进行序列化或者反序列化，但是在实际开发当中，我们一般都用枚举代表某一个数值，数据库存储某个值。  
+spring mvc 接收或者序列化枚举类型时，
+默认是根据枚举的名称(string)进行序列化或者反序列化。  
+但是在实际开发当中，我们一般用枚举代表某一个数值，数据库存储值。
 同时我们也希望和前端交互用数值交互，而不是string名称。因此用到这个工具类  
 支持以下几个组件的反序列化和序列化
 * spring convert  
@@ -74,3 +76,8 @@ ParserConfig.getGlobalInstance().register(EnumDeserializerConfig.FASTJSON_MODULE
 // 反序列化
 SerializeConfig.getGlobalInstance().register(EnumDeserializerConfig.FASTJSON_MODULE);
 ```
+
+这样配置好之后呢，你可以直接用枚举当做接收参数和返回参数了。前端交互用的还是数值类型哦。  
+这样针对老项目重构的时候可以在不影响前端的情况下，后端全部可以改成枚举哦。  
+
+数据库枚举的序列化和反序列化-mybatisPlus目前是直接支持的。参考mybatisPlus的文档即可。但是和前端用数值交互需要配合此代码才行哦

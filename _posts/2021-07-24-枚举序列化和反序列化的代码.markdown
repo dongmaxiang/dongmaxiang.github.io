@@ -6,83 +6,90 @@ date: 2021-07-24 20:20:00.000000000 +08:00
 categories: [java,枚举]
 tags: [效率,序列化,反序列化,枚举]
 ---
+在java或各种框架中，[反]序列化对枚举类型默认一般都是用的枚举的名称。  
+如果代码有魔法值，我们想改成枚举类型。但我们在改造、重构后端的时候不想对前端或者第三方有影响，可以用到此方法。
 
 # 必须用到的枚举工具类
 * 参考通用枚举 [通用枚举]({{ "/通用枚举" | relative_url }})
 
 # 代码（最初版本）
 
+1.可反序列化的枚举  
 ```java
-public class EnumDeserializerConfig {
-    
-    /**
-     * 可反序列化的枚举
-     */
-    public enum DeserializableEnum {
-        // DBEnum类是单独的一个包，也是枚举的一个通用接口
-        DB_Enum(DBEnum.class, DBEnum::getValue, DB_Enum::getDoc),
-        // 一个枚举对应单个标识
-        I_Enum(IEnum.class, IEnum::getIdentity, IEnum::getDoc),
-        // 一个枚举对应多个标识
-        I_Enums(IEnums.class, IEnums::getIdentities, IEnums::getDoc),
-        ;
+/**
+ * 可反序列化的枚举
+ */
+public enum DeserializableEnum {
+    // DBEnum是MybatisPlus枚举的adapter，增加了getDoc的方法。MybatisPlus是直接支持数据库[反]序列化的。但是还不支持和前端的[反]序列化的交互，所以在此配置即可。
+    DB_Enum(DBEnum.class, DBEnum::getValue, DB_Enum::getDoc),
+    // 一个枚举对应单个标识
+    I_Enum(IEnum.class, IEnum::getIdentity, IEnum::getDoc),
+    // 一个枚举对应多个标识
+    I_Enums(IEnums.class, IEnums::getIdentities, IEnums::getDoc),
+    ;
 
-        private final Class<?> enumInterface;
-        private final Function<Object, Serializable> getIdentityFunction;
-        private final Function<Object, String> getDocFunction;
+    private final Class<?> enumInterface;
+    private final Function<Object, Serializable> getIdentityFunction;
+    private final Function<Object, String> getDocFunction;
 
-        <T> DeserializableEnum(Class<T> enumInterface, Function<T, Serializable> getIdentityFunction, Function<T, String> getDocFunction) {
-            this.enumInterface = enumInterface;
-            this.getIdentityFunction = (Function<Object, Serializable>) getIdentityFunction;
-            this.getDocFunction = (Function<Object, String>) getDocFunction;
-        }
+    <T> DeserializableEnum(Class<T> enumInterface, Function<T, Serializable> getIdentityFunction, Function<T, String> getDocFunction) {
+        this.enumInterface = enumInterface;
+        this.getIdentityFunction = (Function<Object, Serializable>) getIdentityFunction;
+        this.getDocFunction = (Function<Object, String>) getDocFunction;
+    }
 
-      /**
-       * 判断class是否可以进行反序列化
-       */
-        public static Optional<DeserializableEnum> getDeserializableEnum(Class<?> enumClass) {
-            if (enumClass == null) {
-                return Optional.empty();
-            }
-            if (!enumClass.isEnum()) {
-                return Optional.empty();
-            }
-            for (DeserializableEnum deserializableEnum : DeserializableEnum.values()) {
-                if (deserializableEnum.enumInterface.isAssignableFrom(enumClass)) {
-                    return Optional.of(deserializableEnum);
-                }
-            }
+  /**
+   * 判断class是否可以进行反序列化
+   */
+    public static Optional<DeserializableEnum> getDeserializableEnum(Class<?> enumClass) {
+        if (enumClass == null) {
             return Optional.empty();
         }
+        if (!enumClass.isEnum()) {
+            return Optional.empty();
+        }
+        for (DeserializableEnum deserializableEnum : DeserializableEnum.values()) {
+            if (deserializableEnum.enumInterface.isAssignableFrom(enumClass)) {
+                return Optional.of(deserializableEnum);
+            }
+        }
+        return Optional.empty();
+    }
 
-        /**
-         * 进行反序列化
-         */
-        private Enum<?> deserializeEnum(Class<Enum<?>> enumClass, Object rawValue) {
-            for (Enum<?> enumConstant : enumClass.getEnumConstants()) {
-                Serializable identity = this.getGetIdentityFunction.apply(enumConstant);
-                if (Objects.equals(identity, rawValue)) {
-                    return enumConstant;
-                }
-                if (identity instanceof Object[]) {
-                    for (Object i : (Object[]) identity) {
-                        if (Objects.equals(i, rawValue)) {
-                            return enumConstant;
-                        }
+    /**
+     * 进行反序列化
+     */
+    private Enum<?> deserializeEnum(Class<Enum<?>> enumClass, Object rawValue) {
+        for (Enum<?> enumConstant : enumClass.getEnumConstants()) {
+            Serializable identity = this.getGetIdentityFunction.apply(enumConstant);
+            if (Objects.equals(identity, rawValue)) {
+                return enumConstant;
+            }
+            if (identity instanceof Object[]) {
+                for (Object i : (Object[]) identity) {
+                    if (Objects.equals(i, rawValue)) {
+                        return enumConstant;
                     }
                 }
             }
-
-            // 最后值为空则返回null
-            if (rawValue == null || StringUtils.isBlank(rawValue.toString())) {
-                return null;
-            }
-
-            // 转换失败一律抛异常，后期可根据注解进行动态的抛异常
-            throw new EnumDeserializeException(MessageFormat.format("参数错误，无法匹配对应的类型,value:{0}, type:{1}", rawValue, enumClass.getSimpleName()));
         }
-    }
 
+        // 最后值为空则返回null
+        if (rawValue == null || StringUtils.isBlank(rawValue.toString())) {
+            return null;
+        }
+
+        // 转换失败一律抛异常，后期可根据注解进行动态的抛异常
+        throw new EnumDeserializeException(MessageFormat.format("参数错误，无法匹配对应的类型,value:{0}, type:{1}", rawValue, enumClass.getSimpleName()));
+    }
+}
+
+```
+
+2.枚举[反]序列化的各种框架配置
+如jackson,fastjson,springConvert等  
+```java
+public class EnumDeserializerImpls {
     /**
      * 定义一个常量为spring converter 组件
      */
@@ -203,14 +210,6 @@ public class EnumDeserializerConfig {
         return valueResolvableType.getRawClass();
     }
 
-
-    public static class EnumDeserializeException extends RuntimeException {
-
-        public EnumDeserializeException(String message) {
-            super(message);
-        }
-    }
-
 }
 ```
 
@@ -220,7 +219,7 @@ public class EnumDeserializerConfig {
 > 如果是间接实现的枚举或者泛型的位置不在第一个位置，那就有问题喽。  
 
 3：反序列化和序列化只能单层序列和反序列，什么意思呢？
-> 枚举的标识可以反向查找枚举对吧？如果枚举的标识还是一个枚举呢？目前只支持序列化和反序列化最外一层的value。太抽象？
+> 枚举的标识可以获取到枚举对吧？如果枚举的标识还是一个枚举呢？目前只支持序列化和反序列化最外一层的value。太抽象？
 
 * 用户类型1  
 ```java
@@ -284,122 +283,125 @@ public enum UserType2 implements IEnum<UserType1> {
 * 支持枚举内嵌的标识序列化和反序列化
 * 更精准的获取泛型上的标识
 
+1.可反序列化的枚举  
 ```java
-@Slf4j
-public class EnumDeserializerConfig {
+/**
+ * 可反序列化的枚举
+ */
+public enum DeserializableEnum {
+    // DBEnum是MybatisPlus枚举的adapter，增加了getDoc的方法。MybatisPlus是直接支持数据库[反]序列化的。但是还不支持和前端的[反]序列化的交互，所以在此配置即可。
+    DB_Enum(DBEnum.class, 0, DBEnum::getValue, DBEnum::getDoc),
+    I_Enum(IEnum.class, 0, IEnum::getIdentity, IEnum::getDoc),
+    I_Enums(IEnums.class, 0, IEnums::getIdentities, IEnums::getDoc),
+    ;
 
+    // 可反序列化枚举的接口
+    public final Class<?> enumInterface;
+    // 接口对应的identity(枚举的标识)泛型的下标
+    private final int identityGenericIndex;
+    // 获取枚举的identity
+    private final Function<Enum<?>, Serializable> getIdentityFunction;
+    // 获取枚举的doc(文档)
+    public final Function<Enum<?>, String> getDocFunction;
+
+    <T> DeserializableEnum(Class<T> enumInterface, int identityGenericIndex, Function<T, Serializable> getIdentityFunction, Function<T, String> getDocFunction) {
+        this.enumInterface = enumInterface;
+        this.identityGenericIndex = identityGenericIndex;
+        this.getIdentityFunction = (Function<Enum<?>, Serializable>) getIdentityFunction;
+        this.getDocFunction = (Function<Enum<?>, String>) getDocFunction;
+    }
 
     /**
-     * 可反序列化的枚举
+     * 进行反序列化
      */
-    public enum DeserializableEnum {
-        DB_Enum(DBEnum.class, 0, DBEnum::getValue, DBEnum::getDoc),
-        I_Enum(IEnum.class, 0, IEnum::getIdentity, IEnum::getDoc),
-        I_Enums(IEnums.class, 0, IEnums::getIdentities, IEnums::getDoc),
-        ;
-
-        // 可反序列化枚举的接口
-        public final Class<?> enumInterface;
-        // 接口对应的identity(枚举的标识)泛型的下标
-        private final int identityGenericIndex;
-        // 获取枚举的identity
-        private final Function<Enum<?>, Serializable> getIdentityFunction;
-        // 获取枚举的doc(文档)
-        public final Function<Enum<?>, String> getDocFunction;
-
-        <T> DeserializableEnum(Class<T> enumInterface, int identityGenericIndex, Function<T, Serializable> getIdentityFunction, Function<T, String> getDocFunction) {
-            this.enumInterface = enumInterface;
-            this.identityGenericIndex = identityGenericIndex;
-            this.getIdentityFunction = (Function<Enum<?>, Serializable>) getIdentityFunction;
-            this.getDocFunction = (Function<Enum<?>, String>) getDocFunction;
-        }
-
-        /**
-         * 进行反序列化
-         */
-        private Enum<?> deserializeEnum(Class<Enum<?>> enumClass, Object rawValue) {
-            for (Enum<?> enumConstant : enumClass.getEnumConstants()) {
-                Object identity = getIdentity(enumConstant);
-                if (identity instanceof Object[]) {
-                    for (Object i : (Object[]) identity) {
-                        if (Objects.equals(i, rawValue)) {
-                            return enumConstant;
-                        }
-                    }
-                } else {
-                    if (Objects.equals(identity, rawValue)) {
+    private Enum<?> deserializeEnum(Class<Enum<?>> enumClass, Object rawValue) {
+        for (Enum<?> enumConstant : enumClass.getEnumConstants()) {
+            Object identity = getIdentity(enumConstant);
+            if (identity instanceof Object[]) {
+                for (Object i : (Object[]) identity) {
+                    if (Objects.equals(i, rawValue)) {
                         return enumConstant;
                     }
                 }
-            }
-
-            // 最后值为空则返回null
-            if (rawValue == null || StringUtils.isBlank(rawValue.toString())) {
-                return null;
-            }
-
-            // 转换失败一律抛异常，后期可根据注解进行动态的抛异常
-            throw new EnumDeserializeException(MessageFormat.format("参数错误，无法匹配对应的类型,value:{0}, type:{1}", rawValue, enumClass.getSimpleName()));
-        }
-        
-        public Object getIdentity(Enum<?> enumConstant) {
-            Serializable identity = this.getIdentityFunction.apply(enumConstant);
-            if (identity == null) {
-                return null;
-            }
-            Class<?> identityType;
-            if (identity instanceof Object[]) {
-                identityType = identity.getClass().getComponentType();
             } else {
-                identityType = identity.getClass();
-            }
-
-            // 递归判断
-            DeserializableEnum deserializableEnum = getDeserializableEnumAndIdentityClass(identityType)
-                    .map(Map.Entry::getKey)
-                    .orElse(null);
-
-            if (deserializableEnum == null || !(identity instanceof Enum<?>)) {
-                return identity;
-            }
-            return deserializableEnum.getIdentity((Enum<?>) identity);
-        }
-
-        /**
-         * 获取接口上标识枚举值的类型
-         */
-        private Class<?> getValueRawClass(Class<?> enumInterface) {
-            ResolvableType resolvableType = ResolvableType.forClass(enumInterface).as(this.enumInterface);
-            Class<?> valueRawClass = resolvableType.getGeneric(this.identityGenericIndex).resolve();
-            // 判断递归获取
-            DeserializableEnum deserializableEnum = DeserializableEnum.getDeserializableEnumAndIdentityClass(valueRawClass)
-                    .map(Map.Entry::getKey)
-                    .orElse(null);
-
-            if (deserializableEnum == null) {
-                return valueRawClass;
-            }
-
-            return deserializableEnum.getValueRawClass(valueRawClass);
-        }
-
-        public static Optional<Map.Entry<DeserializableEnum, Class<?>>> getDeserializableEnumAndIdentityClass(Class<?> enumClass) {
-            if (enumClass == null) {
-                return Optional.empty();
-            }
-            if (!enumClass.isEnum()) {
-                return Optional.empty();
-            }
-            for (DeserializableEnum deserializableEnum : DeserializableEnum.values()) {
-                if (deserializableEnum.enumInterface.isAssignableFrom(enumClass)) {
-                    Class<?> identityValueRawClass = deserializableEnum.getValueRawClass(enumClass);
-                    return Optional.of(Pair.of(deserializableEnum, identityValueRawClass));
+                if (Objects.equals(identity, rawValue)) {
+                    return enumConstant;
                 }
             }
-            return Optional.empty();
         }
+
+        // 最后值为空则返回null
+        if (rawValue == null || StringUtils.isBlank(rawValue.toString())) {
+            return null;
+        }
+
+        // 转换失败一律抛异常，后期可根据注解进行动态的抛异常
+        throw new EnumDeserializeException(MessageFormat.format("参数错误，无法匹配对应的类型,value:{0}, type:{1}", rawValue, enumClass.getSimpleName()));
+    }
+    
+    public Object getIdentity(Enum<?> enumConstant) {
+        Serializable identity = this.getIdentityFunction.apply(enumConstant);
+        if (identity == null) {
+            return null;
+        }
+        Class<?> identityType;
+        if (identity instanceof Object[]) {
+            identityType = identity.getClass().getComponentType();
+        } else {
+            identityType = identity.getClass();
+        }
+
+        // 递归判断
+        DeserializableEnum deserializableEnum = getDeserializableEnumAndIdentityClass(identityType)
+                .map(Map.Entry::getKey)
+                .orElse(null);
+
+        if (deserializableEnum == null || !(identity instanceof Enum<?>)) {
+            return identity;
+        }
+        return deserializableEnum.getIdentity((Enum<?>) identity);
     }
 
+    /**
+     * 获取接口上标识枚举值的类型
+     */
+    private Class<?> getValueRawClass(Class<?> enumInterface) {
+        ResolvableType resolvableType = ResolvableType.forClass(enumInterface).as(this.enumInterface);
+        Class<?> valueRawClass = resolvableType.getGeneric(this.identityGenericIndex).resolve();
+        // 判断递归获取
+        DeserializableEnum deserializableEnum = DeserializableEnum.getDeserializableEnumAndIdentityClass(valueRawClass)
+                .map(Map.Entry::getKey)
+                .orElse(null);
+
+        if (deserializableEnum == null) {
+            return valueRawClass;
+        }
+
+        return deserializableEnum.getValueRawClass(valueRawClass);
+    }
+
+    public static Optional<Map.Entry<DeserializableEnum, Class<?>>> getDeserializableEnumAndIdentityClass(Class<?> enumClass) {
+        if (enumClass == null) {
+            return Optional.empty();
+        }
+        if (!enumClass.isEnum()) {
+            return Optional.empty();
+        }
+        for (DeserializableEnum deserializableEnum : DeserializableEnum.values()) {
+            if (deserializableEnum.enumInterface.isAssignableFrom(enumClass)) {
+                Class<?> identityValueRawClass = deserializableEnum.getValueRawClass(enumClass);
+                return Optional.of(Pair.of(deserializableEnum, identityValueRawClass));
+            }
+        }
+        return Optional.empty();
+    }
+}
+```
+
+2.枚举[反]序列化的各种框架配置
+```java
+@Slf4j
+public class EnumDeserializerImpls {
     /**
      * spring converter反序列化
      */
@@ -502,13 +504,9 @@ public class EnumDeserializerConfig {
         }
     };
 
-
-    public static class EnumDeserializeException extends RuntimeException {
-
-        public EnumDeserializeException(String message) {
-            super(message);
-        }
-    }
-
 }
 ```
+基本实现以及各种框架的组件都已经定义出来了，可以参考[springMvc枚举序列化和反序列化]({{ "/mvc枚举序列化和反序列化的配置" | relative_url }})，把这些实现应用到实际的项目当中。  
+然后我们用各种枚举什么的，后端可以安心的进行重构（使用）了
+
+> 新代码用到了递归，如果不理解旧代码的话阅读起来比较复杂。建议先理解旧代码在阅读新代码
