@@ -1,7 +1,7 @@
 ---
 layout: post
-title: 理解spring的Environment（配置文件）的加载
-permalink: /分析spring的Environment加载
+title: 分析spring的Environment（配置文件）的加载
+permalink: /分析spring的Environment（配置文件）的加载
 date: 2021-08-20 15:53:57.000000000 +08:00
 categories: [java,spring]
 tags: [spring,源码]
