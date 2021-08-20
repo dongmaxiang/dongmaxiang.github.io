@@ -42,7 +42,7 @@ public class AddEnumConverter implements WebMvcConfigurer {
 
   @Override
   public void addFormatters(FormatterRegistry registry) {
-    registry.addConverter(EnumDeserializerConfig.ENUM_DESERIALIZER_CONVERTER);
+    registry.addConverter(EnumDeserializerImpls.ENUM_DESERIALIZER_CONVERTER);
   }
 }
 ```
@@ -63,7 +63,7 @@ public class AddEnumJacksonModule implements WebMvcConfigurer {
         continue;
       }
       ((MappingJackson2HttpMessageConverter) converter).getObjectMapper()
-              .registerModule(EnumDeserializerConfig.ENUM_MODULE);
+              .registerModule(EnumDeserializerImpls.ENUM_MODULE);
     }
   }
 }
@@ -72,9 +72,9 @@ public class AddEnumJacksonModule implements WebMvcConfigurer {
 ## fastJson的使用
 ```java
 // 序列化
-ParserConfig.getGlobalInstance().register(EnumDeserializerConfig.FASTJSON_MODULE);
+ParserConfig.getGlobalInstance().register(EnumDeserializerImpls.FASTJSON_MODULE);
 // 反序列化
-SerializeConfig.getGlobalInstance().register(EnumDeserializerConfig.FASTJSON_MODULE);
+SerializeConfig.getGlobalInstance().register(EnumDeserializerImpls.FASTJSON_MODULE);
 ```
 
 这样配置好之后呢，你可以直接用枚举当做接收参数和返回参数了。前端交互用的还是数值类型哦。  
