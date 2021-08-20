@@ -236,10 +236,11 @@ private void defaultWriteFields(Object obj, ObjectStreamClass desc)
     }
 ```
 
-至此，序列化原理分析完毕，大体总结一下
-* 除基本类型和String、Enum、class和array外，其他类型想要[反]序列化，必须实现Serializable接口，不然直接报错  
+# 总结 
+* 除基本类型和String、Enum、class和array外，其他类型想要[反]序列化，必须实现Serializable接口，不然直接报错
 * 自定义[反]序列化内容有两种方法，一是直接写方法(writeObject(序列化)|readObject(反序列化))到自己的类中，二是实现java.io.Externalizable接口.  
   writeObject参数类型是ObjectOutputStream  
   readObject参数类型是ObjectInputStream  
   **方法返回类型必须为void，private，非static**
-  
+
+* writeReplace返回值为Object类型的方法，可自定义真正序列化的对象
