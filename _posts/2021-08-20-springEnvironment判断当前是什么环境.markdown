@@ -161,7 +161,7 @@ private class Loader {
 ## 总结
 通过监听springEnvironment事件，然后用spring SPI找出所有的EnvironmentPostProcessor  
 Load类为加载配置文件的类。它的逻辑主要分为  
-1.初始化profile(包含null,以及未指定命令行参数的active时用defaultProfle)  
+1.初始化profile(包含null,以及未指定命令行参数的active时用defaultProfile)  
 2.循环profile加载（5个位置、1个名称、4个后缀）的文件  
 3.把加载的资源配置到spring的environment里面  
 4.setActiveProfiles
