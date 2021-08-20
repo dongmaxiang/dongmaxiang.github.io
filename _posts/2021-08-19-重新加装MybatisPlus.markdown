@@ -70,64 +70,64 @@ public class FieldAutoFillHandler implements MetaObjectHandler {
 ## 原理
 
 * 最终调用了`insertFill`或者`updateFill`  
-```java
-// 调用MybatisPlus 的 ibatis代码
-public abstract class BaseStatementHandler implements StatementHandler {
-    protected BaseStatementHandler(Executor executor, MappedStatement mappedStatement, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
-        。。。
-        // 就是在这里调用了MybatisPlus的填充逻辑
-        this.parameterHandler = configuration.newParameterHandler(mappedStatement, parameterObject, boundSql);
-        。。。
-    }
-}
-
-// MybatisPlus的参数处理程序
-public class MybatisDefaultParameterHandler extends DefaultParameterHandler {
-
-    private final TypeHandlerRegistry typeHandlerRegistry;
-    private final MappedStatement mappedStatement;
-    private final Object parameterObject;
-    private final BoundSql boundSql;
-    private final Configuration configuration;
-
-    public MybatisDefaultParameterHandler(MappedStatement mappedStatement, Object parameterObject, BoundSql boundSql) {
-        // processParameter 处理参数
-        super(mappedStatement, processParameter(mappedStatement, parameterObject), boundSql);
-        。。。
-    }
-
-    protected static Object processParameter(MappedStatement ms, Object parameterObject) {
-        if (parameterObject != null &&
-            (SqlCommandType.INSERT == ms.getSqlCommandType() || SqlCommandType.UPDATE == ms.getSqlCommandType())
-        ) {
+    ```java
+    // 调用MybatisPlus 的 ibatis代码
+    public abstract class BaseStatementHandler implements StatementHandler {
+        protected BaseStatementHandler(Executor executor, MappedStatement mappedStatement, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
             。。。
-            Collection<Object> parameters = getParameters(parameterObject);
-            if (null != parameters) {
-                parameters.forEach(obj -> process(ms, obj));
-            } else {
-                process(ms, parameterObject);
-            }
-        }
-        return parameterObject;
-    }
-
-    private static void process(MappedStatement ms, Object parameterObject) {
-        TableInfo tableInfo;
-        ...
-        if (tableInfo != null) {
-            MetaObject metaObject = ms.getConfiguration().newMetaObject(entity);
-            if (SqlCommandType.INSERT == ms.getSqlCommandType()) {
-                populateKeys(tableInfo, metaObject, entity);
-                // 最终填充
-                insertFill(metaObject, tableInfo);
-            } else {
-                // 最终填充
-                updateFill(metaObject, tableInfo);
-            }
+            // 就是在这里调用了MybatisPlus的填充逻辑
+            this.parameterHandler = configuration.newParameterHandler(mappedStatement, parameterObject, boundSql);
+            。。。
         }
     }
-}
-```
+    
+    // MybatisPlus的参数处理程序
+    public class MybatisDefaultParameterHandler extends DefaultParameterHandler {
+    
+        private final TypeHandlerRegistry typeHandlerRegistry;
+        private final MappedStatement mappedStatement;
+        private final Object parameterObject;
+        private final BoundSql boundSql;
+        private final Configuration configuration;
+    
+        public MybatisDefaultParameterHandler(MappedStatement mappedStatement, Object parameterObject, BoundSql boundSql) {
+            // processParameter 处理参数
+            super(mappedStatement, processParameter(mappedStatement, parameterObject), boundSql);
+            。。。
+        }
+    
+        protected static Object processParameter(MappedStatement ms, Object parameterObject) {
+            if (parameterObject != null &&
+                (SqlCommandType.INSERT == ms.getSqlCommandType() || SqlCommandType.UPDATE == ms.getSqlCommandType())
+            ) {
+                。。。
+                Collection<Object> parameters = getParameters(parameterObject);
+                if (null != parameters) {
+                    parameters.forEach(obj -> process(ms, obj));
+                } else {
+                    process(ms, parameterObject);
+                }
+            }
+            return parameterObject;
+        }
+    
+        private static void process(MappedStatement ms, Object parameterObject) {
+            TableInfo tableInfo;
+            ...
+            if (tableInfo != null) {
+                MetaObject metaObject = ms.getConfiguration().newMetaObject(entity);
+                if (SqlCommandType.INSERT == ms.getSqlCommandType()) {
+                    populateKeys(tableInfo, metaObject, entity);
+                    // 最终填充
+                    insertFill(metaObject, tableInfo);
+                } else {
+                    // 最终填充
+                    updateFill(metaObject, tableInfo);
+                }
+            }
+        }
+    }
+    ```
 
 # 2.[批量|单个]软删除使自动填充器生效（默认不生效）
 mybatisPlus 使用`@TableLogic`注解在字段上，表示当前表软删除，当前字段为软删除字段    
@@ -412,7 +412,11 @@ lambda语法已经帮我们解决了字符串编码的问题，但是非lambda�
  * api获取字段名
  * 避免面向字符串编程
  */
-private static <T> String columnToString(SFunction<T, ?> column) {
+public static <T> String cts(SFunction<T, ?> column) {
+    return columnToString(column);
+}
+
+public static <T> String columnToString(SFunction<T, ?> column) {
     // mybatisPlus自带的api
     SerializedLambda resolve = LambdaUtils.resolve(column);
     return org.apache.ibatis.reflection.property.PropertyNamer.methodToProperty(resolve.getImplMethodName());

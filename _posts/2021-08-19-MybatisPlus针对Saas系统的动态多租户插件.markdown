@@ -6,11 +6,11 @@ date: 2021-07-25 22:05:23.000000000 +08:00
 categories: [java,mybatis]
 tags: [mybatis,多租户]
 ---
-多租户就是用额外的一个字段代表属主，只有属主的数据才能被当前用户操作  
-**动态**就是有些表是公用的，没有多租户的概念。那么操作此表的时候需要排除
+多租户就是用额外的一个字段代表当前表中的数据的归属。在sql curd时根据上下文的用户（租户） 自动拼接此条件  
+**动态**就是有些表是公用的，没有多租户的概念。那么操作此表的时候需要排除，亦或者多个字段，每个字段的值都不一样等
 
 # 前期工作
-1.首先定义一个多租户的字段  
+1.首先定义一个多租户字段的枚举，为提取数据库多租户字段的字段做准备  
 IEnums参考[通用枚举]({{ "/通用枚举" | relative_url }})
 ```java
 @Getter
@@ -50,6 +50,7 @@ public enum TenantField implements IEnums<String> {
 为接下来动态拼接sql做准备
 
 # 读取数据库的多租户信息
+这个是MYSQL的获取表字段的方式哦，其他类型的数据库请参考其文档
 ToString.lazyJson 可参考[优雅打印日志]({{ "/java如何优雅的打印log" | relative_url }})
 ```java
 
@@ -149,6 +150,7 @@ public class CustomTenantSqlParser extends TenantSqlParser {
         }
     }
 
+    // 更新
     @Override
     public void processUpdate(net.sf.jsqlparser.statement.update.Update update) {
         Expression expression = getExpression(update.getTable(), update.getWhere());
@@ -157,6 +159,7 @@ public class CustomTenantSqlParser extends TenantSqlParser {
         }
     }
 
+    // 删除
     @Override
     public void processDelete(net.sf.jsqlparser.statement.delete.Delete delete) {
         Expression expression = getExpression(delete.getTable(), delete.getWhere());
@@ -171,9 +174,7 @@ public class CustomTenantSqlParser extends TenantSqlParser {
     }
 
     /**
-     * 处理 PlainSelect
-     *
-     * @param plainSelect ignore
+     * 处理 普通查询
      * @param addColumn   是否添加租户列,insert into select语句中需要
      */
     @Override
@@ -198,6 +199,7 @@ public class CustomTenantSqlParser extends TenantSqlParser {
         }
     }
 
+    // 联表查询
     @Override
     protected void processJoin(Join join) {
         if (join.getRightItem() instanceof Table) {
@@ -207,6 +209,7 @@ public class CustomTenantSqlParser extends TenantSqlParser {
         }
     }
 
+    // 除新增外最终构造where条件
     private Expression builderExpression(Expression currentExpression, Table table, List<String> tenantFieldList) {
         if (CollectionUtils.isEmpty(tenantFieldList) || !CurrentTenant.isValidTenant()) {
             return currentExpression;
@@ -250,10 +253,6 @@ public class CustomTenantSqlParser extends TenantSqlParser {
      * select a.id, b.name
      * from a
      * join b on b.aid = a.id and [b.]tenant_id in (1,2) --别名[b.]无法加上 TODO
-     *
-     * @param expression 表达式
-     * @param table      表
-     * @return 加上别名的多租户字段表达式
      */
     private Expression processTableAlias4CustomizedTenantIdExpression(Expression expression, Table table, String tenantField) {
         if (expression instanceof ValueListExpression) {
