@@ -220,6 +220,7 @@ public AbstractSqlInjector customSqlMethod() {
 大功告成
 
 # 3.MybatisPlus查询软删除的数据
+批量软删除，我们已经完美的实现，字段填充器也可以生效。但有些业务需要查询已经删除的数据，mybatisPlus目前还没有对应的方法，只能自己实现了。
 
 ## 首先定义方法到mapper里面
 ```java
