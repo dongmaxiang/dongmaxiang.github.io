@@ -427,3 +427,254 @@ public static <T> String columnToString(SFunction<T, ?> column) {
 }
 ```
 这样我们在其他地方也可以用lambda转字段的语法了
+
+# 5.避免空指针，使api操作更安全
+
+集成以上所有的特性到一个类中作为一个baseManager。  
+项目当中所有表对应的service，一律叫manager，都会继承此manger。  
+
+```java
+/**
+ * 和业务无关，所有数据库表的manager继承此类
+ * manger基类 （ 泛型：M 是 mapper 对象，T 是数据库实体 ）
+ * 1：修改原有的api，使api操作更安全
+ * 2：逻辑删除时使用填充删除
+ * 3: lambda转换成字段名，可以随时随地用啦
+ */
+public abstract class BaseManager<M extends CustomBaseMapper<T>, T extends BaseDomain<? extends Serializable>> extends ServiceImpl<M, T> {
+
+    /**
+     * 简写方法名
+     */
+    public static <T> String cts_(SFunction<T, ?> column) {
+        return columnToStringUnderline(column);
+    }
+
+    /**
+     * api获取字段名并且驼峰变下划线
+     */
+    private static <T> String columnToStringUnderline(SFunction<T, ?> column) {
+        return StringUtils.camelToUnderline(columnToString(column));
+    }
+
+    /**
+     * 简写方法名
+     */
+    public static <T> String cts(SFunction<T, ?> column) {
+        return columnToString(column);
+    }
+
+    /**
+     * api获取字段名
+     * 避免面向字符串编程
+     */
+    private static <T> String columnToString(SFunction<T, ?> column) {
+        SerializedLambda resolve = LambdaUtils.resolve(column);
+        return PropertyNamer.methodToProperty(resolve.getImplMethodName());
+    }
+
+
+    private final Class<T> entityClass = currentModelClass();
+
+    // 增加统一校验id的方法
+    public T checkId(Serializable id) throws BizException {
+        return checkId(id, false);
+    }
+
+    public T checkId(Serializable id, boolean ignoreDeleted) throws BizException {
+        T byId = ignoreDeleted ? getByIdIgnoreDeleted(id) : getById(id);
+        if (byId == null) {
+            throw new BizException("数据：" + id + "不存在");
+        }
+        return byId;
+    }
+
+    /*
+     * 如果条件为空一律返回null，禁止抛出异常
+     */
+    @Override
+    public T getById(Serializable id) {
+        if (id == null) {
+            return null;
+        }
+        return super.getById(id);
+    }
+
+    public T getByIdIgnoreDeleted(Serializable id) {
+        if (id == null) {
+            return null;
+        }
+        return getBaseMapper().selectByIdIgnoreDeleted(id);
+    }
+
+    // 调用软删除
+    @Override
+    public boolean removeById(Serializable id) {
+        T baseDomain = BeanUtils.instantiateClass(entityClass);
+        //noinspection unchecked
+        ((BaseDomain<Serializable>) baseDomain).setId(id);
+        return SqlHelper.retBool(getBaseMapper().deleteByIdWithFill(baseDomain));
+    }
+
+    @Override
+    public boolean removeByIds(Collection<? extends Serializable> idList) {
+        T t = BeanUtils.instantiateClass(entityClass);
+        return SqlHelper.retBool(getBaseMapper().deleteBatchIdsWithFill(t, idList));
+    }
+
+    /**
+     * 所有的list 如果条件为空一律返回空的list
+     */
+    @Override
+    public List<T> listByIds(Collection<? extends Serializable> idList) {
+        if (CollectionUtils.isEmpty(idList)) {
+            return Collections.emptyList();
+        }
+        return super.listByIds(idList);
+    }
+
+    /**
+     * 所有的list 如果条件为空一律返回空的list
+     */
+    public List<T> listByIdsIgnoreDeleted(Collection<? extends Serializable> idList) {
+        if (CollectionUtils.isEmpty(idList)) {
+            return Collections.emptyList();
+        }
+        return getBaseMapper().selectBatchIdsIgnoreDeleted(idList);
+    }
+
+    public T getOneIgnoreDeleted(Wrapper<T> queryWrapper) {
+        return getOneIgnoreDeleted(queryWrapper, true);
+    }
+
+    /**
+     * 根据 Wrapper，查询一条记录
+     */
+    public T getOneIgnoreDeleted(Wrapper<T> queryWrapper, boolean throwEx) {
+        if (throwEx) {
+            return getBaseMapper().selectOneIgnoreDeleted(queryWrapper);
+        }
+        return SqlHelper.getObject(log, getBaseMapper().selectListIgnoreDeleted(queryWrapper));
+    }
+
+    /**
+     * 查询条件忽略已经删除的数据(如果是逻辑删除的话)
+     */
+    public LambdaQueryChainWrapper<T> lambdaQueryIgnoreDeleted() {
+        return new LambdaQueryChainWrapper<T>(getBaseMapper()) {
+            boolean haveNullValueOfIn = false;// in条件是否有空的list
+
+            {
+                super.wrapperChildren = new LambdaQueryWrapper<T>() {
+                    // 为空则不添加此条件
+                    @Override
+                    public LambdaQueryWrapper<T> in(boolean condition, SFunction<T, ?> column, Collection<?> coll) {
+                        if (CollectionUtils.isEmpty(coll)) {
+                            haveNullValueOfIn = true;// true，直接返回，不增加这个in条件
+                            return typedThis;
+                        } else {
+                            return super.in(condition, column, coll);
+                        }
+                    }
+                };
+            }
+
+            @Override
+            public List<T> list() {
+                if (haveNullValueOfIn) {
+                    return Collections.emptyList();
+                }
+                // 调用忽略逻辑删除的列表api
+                return BaseManager.this.getBaseMapper().selectListIgnoreDeleted(wrapperChildren);
+            }
+        };
+
+    }
+
+    /**
+     * LambdaQuery中，条件有in，并且条件为空，一律返回空的list
+     */
+    @Override
+    public LambdaQueryChainWrapper<T> lambdaQuery() {
+        return new LambdaQueryChainWrapper<T>(getBaseMapper()) {
+            boolean haveNullValueOfIn = false;// in条件是否有空的list
+
+            {
+                super.wrapperChildren = new LambdaQueryWrapper<T>() {
+                    // 为空则不添加此条件
+                    @Override
+                    public LambdaQueryWrapper<T> in(boolean condition, SFunction<T, ?> column, Collection<?> coll) {
+                        if (CollectionUtils.isEmpty(coll)) {
+                            haveNullValueOfIn = true;// true，直接返回，不增加这个in条件
+                            return typedThis;
+                        } else {
+                            return super.in(condition, column, coll);
+                        }
+                    }
+                };
+            }
+
+            @Override
+            public List<T> list() {
+                if (haveNullValueOfIn) {
+                    return Collections.emptyList();
+                }
+                return super.list();
+            }
+        };
+    }
+
+    /**
+     * query中，条件有且只有一个in，并且条件为空，一律返回空的list
+     */
+    @Override
+    public QueryChainWrapper<T> query() {
+        return new QueryChainWrapper<T>(getBaseMapper()) {
+            // in条件是否有空的list
+            boolean haveNullValueOfIn = false;
+            // 只有in的条件
+            boolean onlyInCondition = true;
+
+            {
+                super.wrapperChildren = new QueryWrapper<T>() {
+                    // 为空则不添加此条件
+                    @Override
+                    public QueryWrapper<T> in(boolean condition, String column, Collection<?> coll) {
+                        if (CollectionUtils.isEmpty(coll)) {
+                            haveNullValueOfIn = true;// true，直接返回，不增加这个in条件
+                            return typedThis;
+                        } else {
+                            return super.in(condition, column, coll);
+                        }
+                    }
+
+                    @Override
+                    protected QueryWrapper<T> doIt(boolean condition, ISqlSegment... sqlSegments) {
+                        onlyInCondition = false;// 此方法执行代表有其他的条件
+                        return super.doIt(condition, sqlSegments);
+                    }
+                };
+            }
+
+            @Override
+            public List<T> list() {
+                if (onlyInCondition && haveNullValueOfIn) {
+                    return Collections.emptyList();
+                }
+                return super.list();
+            }
+        };
+    }
+}
+```
+
+# 总结
+1. 配置字段填充器  
+省去无关记录用户的操作
+2. 批量软删除使字段填充器删除时也生效  
+3. 查询已经删除的数据  
+4. 避免字符串编程  
+5. 避免空指针异常  
+
+mybatisPlus 虽然能开箱即用，但是如果没有更完善的配置，用起来也会不是特别的方便。这些特性配置完事之后，按照每个特性的使用步骤来。
+可以节省我们开发人员很多的代码量。以及省去了很多不需要关系的东西。
