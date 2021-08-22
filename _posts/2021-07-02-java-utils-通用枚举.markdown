@@ -38,7 +38,7 @@ public enum Condition {
   }
 }
 ```
-避免**冗余代码**，所以用到此工具类
+避免**冗余代码**，所以用到此工具类，用法就是所有的枚举需要实现此类即可进行使用
 
 ## 代码  
 
@@ -199,3 +199,6 @@ public enum UserType implements IEnum<Integer> {
 ```java
 Optional<UserType> type = IEnums.getEnum(UserType.class, 1);
 ```
+
+# 总结
+在项目中，把我们的枚举统一归纳起来，所有的枚举实现此类接口。这样就可以直接爽快的使用了

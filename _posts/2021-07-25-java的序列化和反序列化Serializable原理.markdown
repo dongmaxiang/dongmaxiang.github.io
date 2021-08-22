@@ -30,6 +30,19 @@ public static void main(String[] args) throws IOException {
 
 这样就会把对象序列化到指定的文件中，我们点开writeObject方法看源码一探究竟  
 ```java
+
+public final void writeObject(Object obj)throws IOException{
+  ...
+  try{
+      writeObject0(obj,false);
+  }catch(IOException ex){
+      if(depth==0){
+        writeFatalException(ex);
+      }
+      throw ex;
+  }
+}
+
 private void writeObject0(Object obj, boolean unshared)
         throws IOException
     {
