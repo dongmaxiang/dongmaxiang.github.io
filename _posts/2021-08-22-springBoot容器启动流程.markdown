@@ -80,14 +80,18 @@ public class EventPublishingRunListener implements SpringApplicationRunListener 
 2.environmentPrepared -》ApplicationEnvironmentPreparedEvent  
 配置环境变量(远程)加载配置文件资源等
 
-3.contextPrepared -》ApplicationContextInitializedEvent
-spring容器准备，
+3.contextPrepared -》ApplicationContextInitializedEvent  
+容器准备，应用程序初始化
 
-4.contextLoaded -》ApplicationPreparedEvent
-spring容器已加载完毕，
+4.contextLoaded -》ApplicationPreparedEvent  
+容器已加载完毕，应用程序已准备就绪
 
-5.started -》ApplicationStartedEvent
+5.started -》ApplicationStartedEvent  
+过去式，代表容器开始运行已完成，应用程序以开始完成
 
-6.running -》ApplicationReadyEvent
+6.running -》ApplicationReadyEvent  
+运行中，程序已做完
 
 --failed -》ApplicationFailedEvent  
+容器或应用程序启动失败时的事件处理器，spring默认就是打印日志。  
+我们可以实现此事件的监听，项目启动失败之后直接报警等
