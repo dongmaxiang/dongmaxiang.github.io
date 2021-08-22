@@ -255,7 +255,7 @@ public interface CustomBaseMapper<T extends BaseDomain<? extends Serializable>> 
 
 ## 然后定义这些个方法的实现
 
-**有用动态代理啊[动态代理]({{ "/java动态代理" | relative_url }})**
+**有用动态代理啊[动态代理]({{ "/javaUtil动态代理" | relative_url }})**
 
 
 ```java
@@ -271,6 +271,7 @@ public static class SelectOneIgnoreDeleted extends AbstractMethod {
     public MappedStatement injectMappedStatement(Class<?> mapperClass, Class<?> modelClass, TableInfo tableInfo) {
 
         // DynamicProxy为本文的动态代理
+        // 和源码最重要的不同点是，这里直接忽略逻辑删除 
         TableInfo ignoreDeleteLogic = new DynamicProxy<>(tableInfo, Object.class)
                 .getProxy((target, proxyMethod, args, originMethod) -> {
                     // 忽略逻辑删除
@@ -309,6 +310,7 @@ public static class SelectByIdIgnoreDeleted extends AbstractMethod {
         String formatted = String.format(SqlMethod.SELECT_BY_ID.getSql()
                 , sqlSelectColumns(tableInfo, false)
                 , tableInfo.getTableName(), tableInfo.getKeyColumn(), tableInfo.getKeyProperty()
+                // 和源码最重要的不同点是这里不拼接逻辑删除的sql
                 , EMPTY
         );
 
@@ -332,6 +334,7 @@ public static class SelectBatchByIdsIgnoreDeleted extends AbstractMethod {
                 , tableInfo.getTableName()
                 , tableInfo.getKeyColumn()
                 , SqlScriptUtils.convertForeach("#{item}", COLLECTION, null, "item", COMMA)
+                // 和源码最重要的不同点是这里不拼接逻辑删除的sql
                 , EMPTY
         );
         SqlSource sqlSource = languageDriver.createSqlSource(configuration, sqlFormatted, Object.class);
@@ -350,7 +353,7 @@ public static class SelectListIgnoreDeleted extends AbstractMethod {
     @Override
     public MappedStatement injectMappedStatement(Class<?> mapperClass, Class<?> modelClass, TableInfo tableInfo) {
 
-        // 忽略逻辑删除
+        // 和源码最重要的不同点是，这里直接忽略逻辑删除
         TableInfo ignoreDeleteLogic = new DynamicProxy<>(tableInfo, Object.class)
                 .getProxy((target, proxyMethod, args, originMethod) -> {
                     if (originMethod.getName().equals("isLogicDelete")) {
