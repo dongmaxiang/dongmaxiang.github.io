@@ -1,0 +1,125 @@
+---
+layout: post
+title: 获取spring启动环境的工具类
+permalink: /获取spring启动环境的工具类
+date: 2021-08-21 15:53:57.000000000 +08:00
+categories: [java,spring]
+tags: [spring,源码]
+---
+
+# 必须用到的枚举工具类
+* 参考通用枚举的---使用例子一 [通用枚举]({{ "/通用枚举" | relative_url }})  
+
+# 定义ENV枚举
+```java
+@Slf4j
+public enum ENV implements IEnums<String> {
+    RELEASE("正式", "release", "prod"),
+    PRE("预发", "pre"),
+    TEST("测试", "test", "test1", "test2", "test3"),
+    DEV("dev", "dev"),
+    LOCAL("本地", "local"),
+    ;
+
+    private final String[] envs;
+    private final String doc;
+
+    ENV(String doc, String... envs) {
+        this.envs = envs;
+        this.doc = doc;
+    }
+
+    private static ENV CURRENT_ENV;
+
+    private static void setCurrentEnv(ENV env) {
+        // 此变量不可随意改变，如有程序错乱，环境不一致就直接退出程序，避免后续的问题
+        if (CURRENT_ENV != null && CURRENT_ENV != env) {
+            System.out.println("ENV只能赋值一次，请查看spring容器配置是否正确");
+            System.err.println("ENV只能赋值一次，请查看spring容器配置是否正确");
+            log.error("ENV只能赋值一次，请查看spring容器配置是否正确");
+            System.exit(1);
+        }
+        CURRENT_ENV = env;
+        System.out.println("当前启动环境:" + CURRENT_ENV);
+        log.warn("当前启动环境:" + CURRENT_ENV);
+    }
+
+    public static boolean isProd() {
+        return Objects.equals(getENV(), RELEASE);
+    }
+
+    public static boolean isDEV() {
+        return Objects.equals(getENV(), DEV);
+    }
+
+    public static boolean isDevOrTest() {
+        return isDEV() || Objects.equals(getENV(), TEST);
+    }
+
+    private static ENV getENV() {
+        Assert.notNull(CURRENT_ENV, "环境还未初始化，请确认代码顺序");
+        return CURRENT_ENV;
+    }
+
+    @Override
+    public String[] getIdentities() {
+        return envs;
+    }
+
+    @Override
+    public String getDoc() {
+        return doc;
+    }
+}
+```
+
+# 定义spring listener 推断程序的环境
+
+## 先要在factories文件配置此类的监听
+```properties
+# Run Listeners
+org.springframework.context.ApplicationListener=\
+    com.wuyi.mkt.common.emnus.ENV.DecideENVProcessor
+```
+
+## java推断逻辑的代码
+
+[springBoot容器启动流程]({{ "/springBoot容器启动流程" | relative_url }})  
+ApplicationContextInitializedEvent 事件是容器上下文准备初始化的时候进行调用，此事件代表之前的environment，已经初始化完毕  
+[environment主要流程解析]({{ "/分析spring的Environment主要流程加载" | relative_url }})  
+
+
+```java
+public static class DecideENVProcessor implements ApplicationListener<ApplicationContextInitializedEvent> {
+
+    private static final AtomicBoolean initialized = new AtomicBoolean(false);
+
+    @Override
+    public void onApplicationEvent(ApplicationContextInitializedEvent event) {
+        ConfigurableEnvironment environment = event.getApplicationContext().getEnvironment();
+        // profiles多容器下有可能 会多次调用，头几次可能为空
+        if (environment.getActiveProfiles().length == 0) {
+            return;
+        }
+        // 命令行传递参数的active.profile 肯定不为空，多次调用的话要避免重复执行以下逻辑
+        if (!initialized.compareAndSet(false, true)) {
+            return;
+        }
+        ENV env = IEnums.getEnum(ENV.class, environment.getActiveProfiles()[0], RELEASE);
+        ENV.setCurrentEnv(env);
+    }
+}
+```
+这样在ApplicationContextInitializedEvent事件之后的逻辑，直接调用枚举Env，用来处理不同的业务逻辑即可。  
+虽然直接用
+```java
+@Autowired
+Environment env;
+
+boolean isDev = Objects.eqalse("dev", env.getActiveProfiles()[0]);
+```
+也能实现，但是这用容易写错，后期也不易于维护。更多的缺点你懂得。。。
+
+# 总结
+我们用通用枚举实现配置我们各个不同的环境的env枚举。
+然后再监听spring 容器启动事件，获取Environment的activeProfiles，存到上下文当中，这样我们在后续的工作后期写代码中，用起来特别的方便。

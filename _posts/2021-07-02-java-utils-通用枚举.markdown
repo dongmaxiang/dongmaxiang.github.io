@@ -2,7 +2,7 @@
 layout: post
 title: 通用枚举
 date: 2021-07-02 15:15:00.000000000 +08:00
-categories: [java,工具类]
+categories: [java,枚举]
 tags: [java,开发工具类,枚举]
 permalink: /通用枚举
 ---
@@ -127,7 +127,7 @@ public class ObjectUtils extends org.apache.commons.lang3.ObjectUtils {
     }
     ```  
 
-## 使用方式之一
+## 使用例子一
 
 * 工具类  
 ```java
@@ -165,7 +165,7 @@ assert test1 == test2;
 
 
 
-## 使用方式之二
+## 使用例子二
 
 * 工具类
 ```java

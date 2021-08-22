@@ -1,7 +1,7 @@
 ---
 layout: post
 title: 分析spring的Environment（配置文件）的加载
-permalink: /分析spring的Environment（配置文件）的加载
+permalink: /分析spring的Environment主要流程加载
 date: 2021-08-20 15:53:57.000000000 +08:00
 categories: [java,spring]
 tags: [spring,源码]
@@ -38,6 +38,7 @@ public class YamlPropertySourceLoader implements PropertySourceLoader {
 5个位置，一个名称，4个后缀，总共有多少种组合？（还没有profile情况下😁）
 
 # 加载流程
+[springBoot容器启动流程]({{ "/springBoot容器启动流程" | relative_url }})
 
 ## springListener
 spring factories 配置了容器启动的监听类  
@@ -58,9 +59,21 @@ public class ConfigFileApplicationListener implements EnvironmentPostProcessor, 
      */
     public static final int DEFAULT_ORDER = Ordered.HIGHEST_PRECEDENCE + 10;
     ...
+
+    // 监听spring boot容器的事件
+    public void onApplicationEvent(ApplicationEvent event) {
+        if (event instanceof ApplicationEnvironmentPreparedEvent) {
+            // 调用 独自搞的EnvironmentPostProcessor
+            onApplicationEnvironmentPreparedEvent((ApplicationEnvironmentPreparedEvent) event);
+        }
+        if (event instanceof ApplicationPreparedEvent) {
+            onApplicationPreparedEvent(event);
+        }
+    }
+    
     private void onApplicationEnvironmentPreparedEvent(ApplicationEnvironmentPreparedEvent event) {
-        // 当spring environment准备时
-        List<EnvironmentPostProcessor> postProcessors = loadPostProcessors();
+        // 根据spring spi 找出environment处理类
+        List<EnvironmentPostProcessor> postProcessors = SpringFactoriesLoader.loadFactories(EnvironmentPostProcessor.class, getClass().getClassLoader());
         // 添加self
         postProcessors.add(this);
         // 排序如果有比DEFAULT_ORDER优先级高的那么会优先处理。
@@ -71,9 +84,10 @@ public class ConfigFileApplicationListener implements EnvironmentPostProcessor, 
         }
     }
 
-    List<EnvironmentPostProcessor> loadPostProcessors() {
-        // 根据spring spi 找出environment处理类
-        return SpringFactoriesLoader.loadFactories(EnvironmentPostProcessor.class, getClass().getClassLoader());
+    // self postProcessEnvironment
+    public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
+        RandomValuePropertySource.addToEnvironment(environment);
+        new Loader(environment, application.getResourceLoader()).load();
     }
     ...
 }
