@@ -78,8 +78,7 @@ public enum ENV implements IEnums<String> {
 ## 先要在factories文件配置此类的监听
 ```properties
 # Run Listeners
-org.springframework.context.ApplicationListener=\
-    com.wuyi.mkt.common.emnus.ENV.DecideENVProcessor
+org.springframework.context.ApplicationListener=com.DecideENVProcessor
 ```
 
 ## java推断逻辑的代码
