@@ -10,20 +10,36 @@ main方法启动时，springBoot启动流程的各个生命周期会以事件通
 ```java
 public class EventPublishingRunListener implements SpringApplicationRunListener {
     ...
+    // 1
     @Override
     public void starting() {
         this.initialMulticaster.multicastEvent(new ApplicationStartingEvent(this.application, this.args));
     }
+    // 2
     @Override
     public void environmentPrepared(ConfigurableEnvironment environment) {
         this.initialMulticaster
                 .multicastEvent(new ApplicationEnvironmentPreparedEvent(this.application, this.args, environment));
     }
+    /**
+     protected void applyInitializers(ConfigurableApplicationContext context) {
+         for (ApplicationContextInitializer initializer : getInitializers()) {
+             Class<?> requiredType = GenericTypeResolver.resolveTypeArgument(initializer.getClass(),
+             ApplicationContextInitializer.class);
+             Assert.isInstanceOf(requiredType, context, "Unable to call initializer.");
+             initializer.initialize(context);
+         }
+     } 
+     */
+
+    // prepared之前 会调用 mian方法启动的SpringApplication 内置的 initialize,如上面的注释的代码
+    // 3
     @Override
     public void contextPrepared(ConfigurableApplicationContext context) {
         this.initialMulticaster
                 .multicastEvent(new ApplicationContextInitializedEvent(this.application, this.args, context));
     }
+    // 4
     @Override
     public void contextLoaded(ConfigurableApplicationContext context) {
         for (ApplicationListener<?> listener : this.application.getListeners()) {
@@ -35,6 +51,7 @@ public class EventPublishingRunListener implements SpringApplicationRunListener 
         this.initialMulticaster.multicastEvent(new ApplicationPreparedEvent(this.application, this.args, context));
     }
 
+    // 5
     @Override
     public void started(ConfigurableApplicationContext context) {
         context.publishEvent(new ApplicationStartedEvent(this.application, this.args, context));
@@ -47,26 +64,10 @@ public class EventPublishingRunListener implements SpringApplicationRunListener 
         AvailabilityChangeEvent.publish(context, ReadinessState.ACCEPTING_TRAFFIC);
     }
 
+    // 6
     @Override
     public void failed(ConfigurableApplicationContext context, Throwable exception) {
-        ApplicationFailedEvent event = new ApplicationFailedEvent(this.application, this.args, context, exception);
-        if (context != null && context.isActive()) {
-            // Listeners have been registered to the application context so we should
-            // use it at this point if we can
-            context.publishEvent(event);
-        }
-        else {
-            // An inactive context may not have a multicaster so we use our multicaster to
-            // call all of the context's listeners instead
-            if (context instanceof AbstractApplicationContext) {
-                for (ApplicationListener<?> listener : ((AbstractApplicationContext) context)
-                        .getApplicationListeners()) {
-                    this.initialMulticaster.addApplicationListener(listener);
-                }
-            }
-            this.initialMulticaster.setErrorHandler(new LoggingErrorHandler());
-            this.initialMulticaster.multicastEvent(event);
-        }
+        ...
     }
     ...
 }
@@ -74,22 +75,25 @@ public class EventPublishingRunListener implements SpringApplicationRunListener 
 ```
 > 当对象间存在一对多关系时，则使用观察者模式（Observer Pattern）。比如，当一个对象被修改时，则会自动通知依赖它的对象。观察者模式属于行为型模式。
 
-1.starting -》ApplicationStartingEvent  
+# 启动流程
+
+1. starting -》ApplicationStartingEvent  
 正在进行时、代表容器刚开始运行了，发出程序开始事件
 
-2.environmentPrepared -》ApplicationEnvironmentPreparedEvent  
+2. environmentPrepared -》ApplicationEnvironmentPreparedEvent  
 配置环境变量(远程)加载配置文件资源等
 
-3.contextPrepared -》ApplicationContextInitializedEvent  
+3. contextPrepared -》ApplicationContextInitializedEvent    
 容器准备，应用程序初始化
+> 此时context已经初始化。调用contextPrepared之前会调用ApplicationContextInitializer的initialize
 
-4.contextLoaded -》ApplicationPreparedEvent  
+4. contextLoaded -》ApplicationPreparedEvent  
 容器已加载完毕，应用程序已准备就绪
 
-5.started -》ApplicationStartedEvent  
+5. started -》ApplicationStartedEvent  
 过去式，代表容器开始运行已完成，应用程序以开始完成
 
-6.running -》ApplicationReadyEvent  
+6. running -》ApplicationReadyEvent  
 运行中，程序已做完
 
 --failed -》ApplicationFailedEvent  
