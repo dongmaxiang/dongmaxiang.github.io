@@ -10,199 +10,124 @@ permalink: /java-spi.html
 service provider interface
 ```java
 // 通过遍历即可获取到对应的class,那么原理是什么呢？
-ServiceLoader<ABC> abcLoaders = ServiceLoader.load(ABC.class);
+Iterator<ABC> iterator = ServiceLoader.load(ABC.class).iterator();
+while (iterator.hasNext()) {
+    ABC next = iterator.next();
+}
 ```
-![原理图](/assets/images/posts/java-spi.jpeg)
 
-## class 是如何初始化的呢？
-[通过provider可以获取到实例，然后进行初始化](#provider)  
-provider提供者
-> jdk11  
+# 原理
 
-* ModuleServicesLookupIterator  
-* LazyClassPathLookupIterator
+java规定spi的配置文件都在这个目录```META-INF/services/```  
+该目录下可以有多个文件，文件的名称必须以class全类名命名。通过ServiceLoader类，读取名字为spi类的全名称的文件  
+内容为多行，一行为一个class的全类名。该class为spi的实现类。
+
+## ServiceLoader入口
 ```java
-private Iterator<Provider<S>> newLookupIterator() {
-        assert layer == null || loader == null;
-        if (layer != null) {
-            return new LayerLookupIterator<>();
-        } else {
-            Iterator<Provider<S>> first = new ModuleServicesLookupIterator<>();
-            Iterator<Provider<S>> second = new LazyClassPathLookupIterator<>();
-            return new Iterator<Provider<S>>() {
-                @Override
-                public boolean hasNext() {
-                    return (first.hasNext() || second.hasNext());
-                }
-                @Override
-                public Provider<S> next() {
-                    if (first.hasNext()) {
-                        return first.next();
-                    } else if (second.hasNext()) {
-                        return second.next();
-                    } else {
-                        throw new NoSuchElementException();
-                    }
-                }
-            };
-        }
+
+public final class ServiceLoader<S> implements Iterable<S> {
+
+    private static final String PREFIX = "META-INF/services/"; // 扫描的目录
+
+    private final Class<S> service; // spi 要加载的class
+
+    private final ClassLoader loader;// classLoader，默认为当前线程的classLoader
+    
+    private LinkedHashMap<String,S> providers = new LinkedHashMap<>(); // 已加载过的SPI都会缓存
+
+    private LazyIterator lookupIterator; // 真正加载的class
+    
+    private ServiceLoader(Class<S> svc, ClassLoader cl) {
+        loader = (cl == null) ? ClassLoader.getSystemClassLoader() : cl;
+        lookupIterator = new LazyIterator(service, loader);
     }
-```  
-  
-<i id ='provider'/>  
-  
-通过对应的class 和构造方法，反射创建对应的实例  
+    ...
+    // 入口
+    public static <S> ServiceLoader<S> load(Class<S> service, ClassLoader loader) {
+        return new ServiceLoader<>(service, loader);
+    }
+
+    public Iterator<S> iterator() {
+        return new Iterator<S>() {
+
+            Iterator<Map.Entry<String,S>> knownProviders = providers.entrySet().iterator(); // 缓存
+
+            public boolean hasNext() {
+                if (knownProviders.hasNext())// 先用缓存
+                    return true;
+                return lookupIterator.hasNext();
+            }
+
+            public S next() {
+                if (knownProviders.hasNext())
+                    return knownProviders.next().getValue(); // 先用缓存
+                return lookupIterator.next();
+            }
+            ...
+        };
+    }
+}
+```
+## LazyIterator 真正的加载类
+
 ```java
-    /**
-     * A Provider implementation that supports invoking, with reduced
-     * permissions, the static factory to obtain the provider or the
-     * provider's no-arg constructor.
-     */
-    private static class ProviderImpl<S> implements Provider<S> {
-        final Class<S> service;
-        final Class<? extends S> type;
-        final Method factoryMethod;  // factory method or null
-        final Constructor<? extends S> ctor; // public no-args constructor or null
-        final AccessControlContext acc;
-
-        ProviderImpl(Class<S> service,
-                     Class<? extends S> type,
-                     Method factoryMethod,
-                     AccessControlContext acc) {
-            this.service = service;
-            this.type = type;
-            this.factoryMethod = factoryMethod;
-            this.ctor = null;
-            this.acc = acc;
-        }
-
-        ProviderImpl(Class<S> service,
-                     Class<? extends S> type,
-                     Constructor<? extends S> ctor,
-                     AccessControlContext acc) {
-            this.service = service;
-            this.type = type;
-            this.factoryMethod = null;
-            this.ctor = ctor;
-            this.acc = acc;
-        }
-
-        @Override
-        public Class<? extends S> type() {
-            return type;
-        }
-
-        @Override
-        public S get() {
-            if (factoryMethod != null) {
-                return invokeFactoryMethod();
-            } else {
-                return newInstance();
-            }
-        }
-
-        /**
-         * Invokes the provider's "provider" method to instantiate a provider.
-         * When running with a security manager then the method runs with
-         * permissions that are restricted by the security context of whatever
-         * created this loader.
-         */
-        private S invokeFactoryMethod() {
-            Object result = null;
-            Throwable exc = null;
-            if (acc == null) {
-                try {
-                    result = factoryMethod.invoke(null);
-                } catch (Throwable x) {
-                    exc = x;
-                }
-            } else {
-                PrivilegedExceptionAction<?> pa = new PrivilegedExceptionAction<>() {
-                    @Override
-                    public Object run() throws Exception {
-                        return factoryMethod.invoke(null);
-                    }
-                };
-                // invoke factory method with permissions restricted by acc
-                try {
-                    result = AccessController.doPrivileged(pa, acc);
-                } catch (Throwable x) {
-                    if (x instanceof PrivilegedActionException)
-                        x = x.getCause();
-                    exc = x;
-                }
-            }
-            if (exc != null) {
-                if (exc instanceof InvocationTargetException)
-                    exc = exc.getCause();
-                fail(service, factoryMethod + " failed", exc);
-            }
-            if (result == null) {
-                fail(service, factoryMethod + " returned null");
-            }
-            @SuppressWarnings("unchecked")
-            S p = (S) result;
-            return p;
-        }
-
-        /**
-         * Invokes Constructor::newInstance to instantiate a provider. When running
-         * with a security manager then the constructor runs with permissions that
-         * are restricted by the security context of whatever created this loader.
-         */
-        private S newInstance() {
-            S p = null;
-            Throwable exc = null;
-            if (acc == null) {
-                try {
-                    p = ctor.newInstance();
-                } catch (Throwable x) {
-                    exc = x;
-                }
-            } else {
-                PrivilegedExceptionAction<S> pa = new PrivilegedExceptionAction<>() {
-                    @Override
-                    public S run() throws Exception {
-                        return ctor.newInstance();
-                    }
-                };
-                // invoke constructor with permissions restricted by acc
-                try {
-                    p = AccessController.doPrivileged(pa, acc);
-                } catch (Throwable x) {
-                    if (x instanceof PrivilegedActionException)
-                        x = x.getCause();
-                    exc = x;
-                }
-            }
-            if (exc != null) {
-                if (exc instanceof InvocationTargetException)
-                    exc = exc.getCause();
-                String cn = ctor.getDeclaringClass().getName();
-                fail(service,
-                     "Provider " + cn + " could not be instantiated", exc);
-            }
-            return p;
-        }
-
-        // For now, equals/hashCode uses the access control context to ensure
-        // that two Providers created with different contexts are not equal
-        // when running with a security manager.
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(service, type, acc);
-        }
-
-        @Override
-        public boolean equals(Object ob) {
-            if (!(ob instanceof ProviderImpl))
+private class LazyIterator implements Iterator<S> {
+    ...
+    Class<S> service;
+    ClassLoader loader;
+    Enumeration<URL> configs = null;// 已扫描的url
+    Iterator<String> pending = null; // 当前扫描的url资源中的spi文本（className为多行）
+    String nextName = null; //下一个spi实现类的名称
+    private LazyIterator(Class<S> service, ClassLoader loader) {
+        this.service = service;
+        this.loader = loader;
+    }
+    
+    // 迭代器的实现
+    public boolean hasNext() {
+        ...
+        configs = configs != null ? configs : loader.getResources("META-INF/services/" + service.getName());
+        while ((pending == null) || !pending.hasNext()) {
+            if (!configs.hasMoreElements()) {
                 return false;
-            @SuppressWarnings("unchecked")
-            ProviderImpl<?> that = (ProviderImpl<?>)ob;
-            return this.service == that.service
-                    && this.type == that.type
-                    && Objects.equals(this.acc, that.acc);
+            }
+
+            pending = parse(service, configs.nextElement());
         }
+        // 直接返回
+        nextName = pending.next();
+        return true;
+        ...
     }
+
+    // 迭代器的实现
+    public S next() {
+        ...
+        String cn = nextName;
+        nextName = null;
+        Class<?> c = null;
+        try {
+            c = Class.forName(cn, false, loader);
+        } catch (ClassNotFoundException x) {
+            fail(service, "Provider " + cn + " not found");
+        }
+        // 该不是spi接口的实现，乱配置的就直接抛出异常
+        if (!service.isAssignableFrom(c)) {
+            fail(service, "Provider " + cn  + " not a subtype");
+        }
+        try {
+            S p = service.cast(c.newInstance());
+            providers.put(cn, p);// 缓存一下
+            return p;// 反射创建对象，直接返回
+        } catch (Throwable x) {
+            fail(service, "Provider " + cn + " could not be instantiated", x);
+        }
+        ...
+    }
+    ...
+}
 ```
+# 总结
+本文以jdk1.8来分析，其他版本略有不同。总的来说就是获取资源```META-INF/services/```目录下的文件名与spi的class名称一致的文件。
+读取里面的实现类，然后通过反射按需实例化并缓存。  
+但是缓存有局限性哦，只能针对同一个ServiceLoader对象多次产生的迭代器有效哦。
