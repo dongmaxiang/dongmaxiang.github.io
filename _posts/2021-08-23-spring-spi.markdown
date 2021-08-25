@@ -91,6 +91,7 @@ public final class SpringFactoriesLoader {
 					FACTORIES_RESOURCE_LOCATION + "]", ex);
 		}
 	}
+	...
 }
 
 ```
