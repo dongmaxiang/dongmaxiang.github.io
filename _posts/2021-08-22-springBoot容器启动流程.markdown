@@ -9,7 +9,8 @@ tags: [spring,源码]
 
 [spring-spi]({{ "/spring-spi" | relative_url }})
 
-main方法启动时，springBoot启动流程的各个生命周期会以事件通知的方式，把事件告知其他程序。
+main方法启动时，springBoot启动流程的各个生命周期会以事件通知的方式，把事件告知其他程序。  
+这个类为事件的主线类。大体流程为这些。  
 ```java
 public class EventPublishingRunListener implements SpringApplicationRunListener {
     ...
@@ -118,6 +119,6 @@ public class EventPublishingRunListener implements SpringApplicationRunListener 
 
 # 总结
 ApplicationContext这个是spring的上下文（非常重要），启动的流程基本上都是围绕着他展开。  
-从各个事件的通知事件我们不难看出。从最开的starting、environmentPrepared都是为applicationContext做准备。根据不同的WebApplicationType实例化不同的applicationContext，之后context会持久environment。  
+从各个事件的通知事件我们不难看出。从最开始的starting、environmentPrepared都是为applicationContext做准备。根据不同的WebApplicationType实例化不同的applicationContext，之后context会持久environment。  
 然后再已context为中心进行initialize事件的触发、然后contextPrepared、contextLoaded、context.refresh。
 最后在做结尾的工作started和running
