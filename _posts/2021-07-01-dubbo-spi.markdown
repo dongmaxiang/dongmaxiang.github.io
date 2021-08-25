@@ -6,112 +6,104 @@ categories: [java,dubbo]
 tags: [dubbo-spi,源码,java]
 permalink: /dubbo-spi.html
 ---
-# 了解dubbo工作原理必会spi机制
-* 参考javaSPI机制 [java-spi]({{ "/java-spi.html" | relative_url }})
 
-## 为什么java有spi机制，dubbo还要自创一套？
-* 没有key value机制
-* javaSpi 如果有多个实现类，只能依次加载，不能精准加载
+* java有spi机制为什么dubbo还要自创一套？
+  - javaSpi没有key value机制，全部都是实现类。没有顺序之分
+  - javaSpi 如果有多个实现类，只能依次加载，不能精准加载
+  - ...
 
-##  dubbo spi
-### 用法  
+* dubboSPI的特性  
+  - 可根据key获取指定的SPI实现
+  - 多个实现可排序
+  - 可包装（对原有的spi实现直接编码进行静态的代理，spi的实现类只留一个有参构造，参数为SPI接口的类型即可变为wrapper）
+  - 可注入(对spi的实现类中如果有set方法，且没有DisableInject注解，那么以此方法的第一个参数的类型+名称，再次从dubboSPI容器中寻找对应的实例。并注入)
+  - 自适应spi实现，动态执行方法逻辑（spi配置文件中的实现类上有Adaptive注解，则直接用实现类。如果没有实现类，但是spi接口中个别方法上有Adaptive注解，也会根据URL进行动态的适配）
+  - ...
+
+用法    
 ```java
 ExtensionLoader<ABC> LOADER = ExtensionLoader.getExtensionLoader(ABC.class);
-ABC instance = LOADER.getExtension("key");
+ABC defaultImpl = LOADER.getDefaultExtension();// 通过@SPI注解获取默认的实现（有可能为空）
+ABC instance = LOADER.getExtension("key");// spi其他的实现（可根据配置文件中的key精准获取）
+ABC adaptiveExtension = LOADER.getAdaptiveExtension(); //获取自适应实现。（这个一般开发人员用不到） 
 ```
 
-### 原理-源码
-* SPI注解  
-dubboSpi 必须有的注解  
-  
+## 原理
+dubboSpi的类必须要有注解 @SPI
 ```java
-@Documented
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE})
+// SPI必须注解在接口上
 public @interface SPI {
-    /**
-     * SPI必须注解在接口上
-     * 该属性代码SPI的默认实现名称
-     */
-    String value() default "";
+    String value() default ""; // SPI的默认实现名称
 }
 ```
 
-* 加载路径  
+然后通过[java-spi]({{ "/java-spi.html" | relative_url }})来找到默认的加载路径（dubboSpi配置的目录）
 ```java
-// 加载策略，JAVA-SPI
 public interface LoadingStrategy extends Prioritized {
     String directory();
 }
 ```
-* 默认实现
-  ![原理图](/assets/images/posts/2021/07/dubbo-spi.png)
 
-# 源码解析  
+下图是dubbo的默认加载路径，*咱们也可以通过[javaSpi]({{ "/java-spi.html" | relative_url }})，扩展一个新的加载路径*
+![原理图](/assets/images/posts/2021/07/dubbo-spi.png)
+
+dubboSpi配置目录下的文件和javaSPI的规范一样，都是以spi全类名作为文件名，不同之处就是内容。  
+dubboSpi配置文件的内容为key=value,key是一个名称，value为实现的class全类名，可以为多行  
+javaSpi配置文件的内容为多行，每行代表一个实现类的全类名名称。  
+dubbo用```ExtensionLoader.getExtensionLoader(ABC.class).getExtension("key")```即可获取到对应的实例
+
+
+## 源码分析  
 ```java
 public class ExtensionLoader<T> {
-  // 缓存
-  private static final ConcurrentMap<Class<?>, ExtensionLoader<?>> EXTENSION_LOADERS = new ConcurrentHashMap<>(64);
+  ...
+  // 加载路径，如上图的默认实现
+  private static volatile LoadingStrategy[] strategies = stream(ServiceLoader.load(LoadingStrategy.class).spliterator(), false)
+          .sorted()
+          .toArray(LoadingStrategy[]::new);
 
-  // 加载策略，如上图的默认实现
-  private static volatile LoadingStrategy[] strategies = loadLoadingStrategies();
+  // 缓存dubboSPI配置文件中的key对应的实例，Holder为懒加载实例的包装
+  private final ConcurrentMap<String, Holder<Object>> cachedInstances = new ConcurrentHashMap<>();
   
-  private static LoadingStrategy[] loadLoadingStrategies() {
-    return stream(ServiceLoader.load(LoadingStrategy.class).spliterator(), false)
-            .sorted()
-            .toArray(LoadingStrategy[]::new);
-  }
-
-
-  // 初始化
   private ExtensionLoader(Class<?> type) {
     this.type = type;
     objectFactory = (type == ExtensionFactory.class ? null : ExtensionLoader.getExtensionLoader(ExtensionFactory.class).getAdaptiveExtension());
   }
 
-  // 静态方法
+  // 使用入口
   public static <T> ExtensionLoader<T> getExtensionLoader(Class<T> type) {
-    if (type == null) {
-      throw new IllegalArgumentException("Extension type == null");
-    }
-    if (!type.isInterface()) {
-      throw new IllegalArgumentException("Extension type (" + type + ") is not an interface!");
-    }
-    if (!type.isAnnotationPresent(org.apache.dubbo.common.extension.SPI.class)) {
-      throw new IllegalArgumentException("Extension type (" + type +
-              ") is not an extension, because it is NOT annotated with @" + SPI.class.getSimpleName() + "!");
-    }
-
-    // 读缓存
-    ExtensionLoader<T> loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
-    if (loader == null) {
-      EXTENSION_LOADERS.putIfAbsent(type, new ExtensionLoader<T>(type));
-      loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
-    }
-    return loader;
+    ...
+    // 忽略缓存的逻辑。最终会调用new ExtensionLoader
+    return new ExtensionLoader<T>(type);
   }
 
-  // 获取指定名称的实例
+  // 获取默认的实现的实例
+  public T getDefaultExtension() {
+    ...
+    // cachedDeafultName 为SPI注解中的value字段
+    if (StringUtils.isBlank(cachedDefaultName) || "true".equals(cachedDefaultName)) {
+      return null;
+    }
+    return getExtension(cachedDefaultName, true);
+  }
+
+  // 获取指定key的实例
   public T getExtension(String name) {
     return getExtension(name, true);
   }
 
-  // 最终会调用此方法，加载对应的class.
-  // key为配置文件的中的名称，value为class
-  private Map<String, Class<?>> loadExtensionClasses() {
-    // 读取spi注解value属性，该值为spi的默认实现名称
-    cacheDefaultExtensionName();
-
-    Map<String, Class<?>> extensionClasses = new HashMap<>();
-
-    // strategies 是加载策略，dubboSpi加载实现类需要指定目录
-    for (LoadingStrategy strategy : strategies) {
-      loadDirectory(extensionClasses, strategy.directory(), type.getName(), strategy.preferExtensionClassLoader(), strategy.overridden(), strategy.excludedPackages());
-      loadDirectory(extensionClasses, strategy.directory(), type.getName().replace("org.apache", "com.alibaba"), strategy.preferExtensionClassLoader(), strategy.overridden(), strategy.excludedPackages());
+  public T getExtension(String name, boolean wrap) {
+    // key 为true则返回默认的
+    if ("true".equals(name)) {
+      return getDefaultExtension();
     }
-
-    return extensionClasses;
+    ...
+    // 缓存代码忽略
+    Object instance = createExtension(name, wrap);
+    ...
+    return (T) instance;
   }
+
 }
 ```
 
@@ -127,55 +119,17 @@ List<T> getActivateExtension(URL url, String[] values, String group);
 为什么会有activate呢？
 原来是有Activate注解在起作用  
 ```java
-@Documented
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE, ElementType.METHOD})
 public @interface Activate {
-    /**
-     * Activate the current extension when one of the groups matches. The group passed into
-     * {@link ExtensionLoader#getActivateExtension(URL, String, String)} will be used for matching.
-     *
-     * @return group names to match
-     * @see ExtensionLoader#getActivateExtension(URL, String, String)
-     */
     String[] group() default {};
 
-    /**
-     * Activate the current extension when the specified keys appear in the URL's parameters.
-     * <p>
-     * For example, given <code>@Activate("cache, validation")</code>, the current extension will be return only when
-     * there's either <code>cache</code> or <code>validation</code> key appeared in the URL's parameters.
-     * </p>
-     *
-     * @return URL parameter keys
-     * @see ExtensionLoader#getActivateExtension(URL, String)
-     * @see ExtensionLoader#getActivateExtension(URL, String, String)
-     */
     String[] value() default {};
 
-    /**
-     * Relative ordering info, optional
-     * Deprecated since 2.7.0
-     *
-     * @return extension list which should be put before the current one
-     */
     @Deprecated
     String[] before() default {};
 
-    /**
-     * Relative ordering info, optional
-     * Deprecated since 2.7.0
-     *
-     * @return extension list which should be put after the current one
-     */
     @Deprecated
     String[] after() default {};
 
-    /**
-     * Absolute ordering info, optional
-     *
-     * @return absolute ordering info
-     */
     int order() default 0;
 }
 ```
@@ -183,7 +137,7 @@ public @interface Activate {
 当dubbo-spi在加载实现类时，会判断实现类是否有该注解，如果有的话则会把这些实现类(带有注解的)缓存起来。
 这样调用[getActivateExtension](#dubbo-spi中有3个方法)时就会获取到对应的实现
 
-### 使用图
+## 使用图
 ![配置图](/assets/images/posts/2021/07/dubbo-filter.png)
 
 
@@ -193,17 +147,12 @@ public @interface Activate {
 如果spi实现类没有空构造方法并且有一个有参的构造函数，且类型是当前实现的接口。
 那么在最终暴露的对象为此wrapper。
 
-### 实例化代码如下  
+## 实例化代码如下  
 
 - 先加载class，并判断是否为wrapper  
 
 ```java
 public class ExtensionLoader<T> {
-  /**
-   * test if clazz is a wrapper class
-   * <p>
-   * which has Constructor with given class type as its only argument
-   */
   private boolean isWrapperClass(Class<?> clazz) {
     try {
       clazz.getConstructor(type);
@@ -215,11 +164,7 @@ public class ExtensionLoader<T> {
 
   private void loadClass(Map<String, Class<?>> extensionClasses, java.net.URL resourceURL, Class<?> clazz, String name,
                          boolean overridden) throws NoSuchMethodException {
-    if (!type.isAssignableFrom(clazz)) {
-      throw new IllegalStateException("Error occurred when loading extension class (interface: " +
-              type + ", class line: " + clazz.getName() + "), class "
-              + clazz.getName() + " is not subtype of interface.");
-    }
+    ... 
     if (clazz.isAnnotationPresent(Adaptive.class)) {
       cacheAdaptiveClass(clazz, overridden);
     }
@@ -230,9 +175,7 @@ public class ExtensionLoader<T> {
       clazz.getConstructor();
       if (StringUtils.isEmpty(name)) {
         name = findAnnotationName(clazz);
-        if (name.length() == 0) {
-          throw new IllegalStateException("No such extension name for the class " + clazz.getName() + " in the config " + resourceURL);
-        }
+        ...
       }
 
       String[] names = NAME_SEPARATOR.split(name);
@@ -251,7 +194,7 @@ public class ExtensionLoader<T> {
 - 初始化判断需要wrap，则进行包装并返回  
 ```java
 public class ExtensionLoader<T> {
-  @SuppressWarnings("unchecked")
+    
   private T createExtension(String name, boolean wrap) {
     Class<?> clazz = getExtensionClasses().get(name);
     if (clazz == null) {
