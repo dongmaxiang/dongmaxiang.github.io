@@ -87,6 +87,7 @@ public class ConfigFileApplicationListener implements EnvironmentPostProcessor, 
     // self postProcessEnvironment
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         RandomValuePropertySource.addToEnvironment(environment);
+        // 核心loader逻辑。下如下代码
         new Loader(environment, application.getResourceLoader()).load();
     }
     ...
