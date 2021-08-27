@@ -10,34 +10,81 @@ permalink: /dubbo-spi.html
 * java有spi机制为什么dubbo还要自创一套？
   - javaSpi没有key value机制，全部都是实现类。没有顺序之分
   - javaSpi 如果有多个实现类，只能依次加载，不能精准加载
-  - ...
+  - ...等
 
-* dubboSPI的特性  
-  - 可根据key获取指定的SPI实现
-  - 多个实现可排序
-  - 可包装（对原有的spi实现直接编码进行静态的代理，spi的实现类只留一个有参构造，参数为SPI接口的类型即可变为wrapper）
-  - 可注入(对spi的实现类中如果有set方法，且没有DisableInject注解，那么以此方法的第一个参数的类型+名称，再次从dubboSPI容器中寻找对应的实例。并注入)
-  - 自适应spi实现，动态执行方法逻辑（spi配置文件中的实现类上有Adaptive注解，则直接用实现类。如果没有实现类，但是spi接口中个别方法上有Adaptive注解，也会根据URL进行动态的适配）
-  - ...
+# dubboSPI的特性  
+  - 可根据key获取指定的SPI实现  
+  - 可根据@Activate注解进行分类，获取指定的SPI实现  
+  - 多个实现可排序  
+    实现排序接口org.apache.dubbo.common.lang.Prioritized
+  - 可包装(静态代理)  
+    对原有的spi实现直接编码进行静态的代理，spi的实现类只留一个有参构造，参数为SPI接口的类型即可变为wrapper
+  - 可注入  
+    对spi的实现类中如果有set方法，且没有DisableInject注解，那么以此方法的第一个参数的类型+名称，再次从dubboSPI容器中寻找对应的实例。并set
+  - spi无实现者的情况下，可自适应实现(一般开发者用不到)   
+    ```getAdaptiveExtension()```方法：  
+    如果spi配置文件中有配置实现类并且类上有Adaptive注解，则直接用此类。  
+    如果没有实现类，但是spi接口中个别方法上有Adaptive注解，并且参数有URL的类型（或者可从参数上获取到url），那么在调用的时候会根据adaptive注解的value,作为key从url中获取对应的value。然后在从SPI容器获取对应的实例，进行动态的调用
+  - ...等其他特性
 
-用法    
+# 使用例子    
 ```java
 ExtensionLoader<ABC> LOADER = ExtensionLoader.getExtensionLoader(ABC.class);
-ABC defaultImpl = LOADER.getDefaultExtension();// 通过@SPI注解获取默认的实现（有可能为空）
-ABC instance = LOADER.getExtension("key");// spi其他的实现（可根据配置文件中的key精准获取）
-ABC adaptiveExtension = LOADER.getAdaptiveExtension(); //获取自适应实现。（这个一般开发人员用不到） 
+// 用法1：通过@SPI注解获取默认的实现（有可能为空）
+ABC defaultImpl = LOADER.getDefaultExtension();
+
+// 用法2: spi其他的实现（可根据配置文件中的key精准获取）
+ABC instance = LOADER.getExtension("key");
+
+// 用法3：获取自适应实现。（这个一般开发人员用不到）
+ABC adaptiveExtension = LOADER.getAdaptiveExtension();
+
+// 用法4：根据@Activate注解的配置，获取有效的spi实例
+// 比如注解@Active(value="key1:value1, key2:value2", group="consumer")
+List<T> activeExtension = LOADER.getActivateExtension(URL url, String[] values); //  从spi从起找对应的名称：values 为spi实现类的key。
+activeExtension = LOADER.getActivateExtension(URL url, String key, String group); // 与上面类似。只不过value是以key从url中取。 group 参数：过滤掉和注解@activate中group不一样的
+activeExtension = LOADER.getActivateExtension(URL url, String[] values, String group); // 结合上面两个
 ```
 
-## 原理
-dubboSpi的类必须要有注解 @SPI
+# Activate
+
+dubbo-spi中有3个方法，用来进行分类获取。
+
 ```java
-// SPI必须注解在接口上
-public @interface SPI {
-    String value() default ""; // SPI的默认实现名称
+List<T> getActivateExtension(URL url, String[] values);
+List<T> getActivateExtension(URL url, String key, String group);
+List<T> getActivateExtension(URL url, String[] values, String group);
+```
+
+注解  
+```java
+public @interface Activate {
+    String[] group() default {};// 分组
+
+    String[] value() default {};// "key1:value1, key2:value2",会从url中匹配对应的
+    ...
+    int order() default 0;
 }
 ```
 
-然后通过[java-spi]({{ "/java-spi.html" | relative_url }})来找到默认的加载路径（dubboSpi配置的目录）
+当dubbo-spi在加载实现类时，会判断实现类是否有该注解，如果有的话则会把这些实现类(带有注解的)缓存起来。
+这样调用getActivateExtension时就会过滤条件并获取到对应的实现
+
+## 使用
+![配置图](/assets/images/posts/2021/07/dubbo-filter.png)
+
+
+# wrapper
+对原有对象的包装，类似于静态代理。可以拦截做很多事情。
+如果spi实现类没有空构造方法并且有一个有参的构造函数，且类型是当前实现的接口。
+那么在最终暴露的对象为此wrapper。
+
+## 使用
+使用图同Activate，不同点是，不需要加注解。并且需要一个有参的构造方法，参数类型是接口。同样配置在配置文件里面。即可完成配置
+
+
+# 简单分析dubbo-spi的初始化
+通过[java-spi]({{ "/java-spi.html" | relative_url }})来找到dubboSpi配置的目录
 ```java
 public interface LoadingStrategy extends Prioritized {
     String directory();
@@ -47,197 +94,91 @@ public interface LoadingStrategy extends Prioritized {
 下图是dubbo的默认加载路径，*咱们也可以通过[javaSpi]({{ "/java-spi.html" | relative_url }})，扩展一个新的加载路径*
 ![原理图](/assets/images/posts/2021/07/dubbo-spi.png)
 
-dubboSpi配置目录下的文件和javaSPI的规范一样，都是以spi全类名作为文件名，不同之处就是内容。  
+> dubboSpi配置目录下的文件和javaSPI的规范一样，都是以spi全类名作为文件名，不同之处就是内容。  
 dubboSpi配置文件的内容为key=value,key是一个名称，value为实现的class全类名，可以为多行  
 javaSpi配置文件的内容为多行，每行代表一个实现类的全类名名称。  
 dubbo用```ExtensionLoader.getExtensionLoader(ABC.class).getExtension("key")```即可获取到对应的实例
 
 
-## 源码分析  
+## 加载并初始化的代码分析
+
 ```java
 public class ExtensionLoader<T> {
   ...
-  // 加载路径，如上图的默认实现
+  // 加载路径，如上图的通过javaSPI寻找默认的实现
   private static volatile LoadingStrategy[] strategies = stream(ServiceLoader.load(LoadingStrategy.class).spliterator(), false)
           .sorted()
           .toArray(LoadingStrategy[]::new);
 
-  // 缓存dubboSPI配置文件中的key对应的实例，Holder为懒加载实例的包装
-  private final ConcurrentMap<String, Holder<Object>> cachedInstances = new ConcurrentHashMap<>();
-  
-  private ExtensionLoader(Class<?> type) {
-    this.type = type;
-    objectFactory = (type == ExtensionFactory.class ? null : ExtensionLoader.getExtensionLoader(ExtensionFactory.class).getAdaptiveExtension());
-  }
+  // 解析spi所有的配置文件
+  private Map<String, Class<?>> getExtensionClasses() {
+    cacheDefaultExtensionName();// 根据@SPI注解获取到默认的实现名称，可以为空
 
-  // 使用入口
-  public static <T> ExtensionLoader<T> getExtensionLoader(Class<T> type) {
-    ...
-    // 忽略缓存的逻辑。最终会调用new ExtensionLoader
-    return new ExtensionLoader<T>(type);
-  }
+    Map<String, Class<?>> extensionClasses = new HashMap<>();
 
-  // 获取默认的实现的实例
-  public T getDefaultExtension() {
-    ...
-    // cachedDeafultName 为SPI注解中的value字段
-    if (StringUtils.isBlank(cachedDefaultName) || "true".equals(cachedDefaultName)) {
-      return null;
+    // 加载路径，如上图的默认实现
+    for (LoadingStrategy strategy : strategies) {
+      // 例如：ExtensionLoader.getExtensionLoader(ABC.class)
+      // type为当前的SPI接口,即ABC.class
+      loadDirectory(extensionClasses, strategy.directory(), type.getName(), strategy.preferExtensionClassLoader(), strategy.overridden(), strategy.excludedPackages());
+      // alibaba变为apache，兼容之前老的实现
+      loadDirectory(extensionClasses, strategy.directory(), type.getName().replace("org.apache", "com.alibaba"), strategy.preferExtensionClassLoader(), strategy.overridden(), strategy.excludedPackages());
+      // loadDirectory 通过解析配置文件里面的内容，最终会调用loadClass，
     }
-    return getExtension(cachedDefaultName, true);
+    return extensionClasses;
   }
 
-  // 获取指定key的实例
-  public T getExtension(String name) {
-    return getExtension(name, true);
-  }
-
-  public T getExtension(String name, boolean wrap) {
-    // key 为true则返回默认的
-    if ("true".equals(name)) {
-      return getDefaultExtension();
-    }
-    ...
-    // 缓存代码忽略
-    Object instance = createExtension(name, wrap);
-    ...
-    return (T) instance;
-  }
-
-}
-```
-
-## Activate介绍
-
-<i id="dubbo-spi中有3个方法">dubbo-spi中有3个方法</i>
-```java
-List<T> getActivateExtension(URL url, String[] values);
-List<T> getActivateExtension(URL url, String key, String group);
-List<T> getActivateExtension(URL url, String[] values, String group);
-```
-
-为什么会有activate呢？
-原来是有Activate注解在起作用  
-```java
-public @interface Activate {
-    String[] group() default {};
-
-    String[] value() default {};
-
-    @Deprecated
-    String[] before() default {};
-
-    @Deprecated
-    String[] after() default {};
-
-    int order() default 0;
-}
-```
-
-当dubbo-spi在加载实现类时，会判断实现类是否有该注解，如果有的话则会把这些实现类(带有注解的)缓存起来。
-这样调用[getActivateExtension](#dubbo-spi中有3个方法)时就会获取到对应的实现
-
-## 使用图
-![配置图](/assets/images/posts/2021/07/dubbo-filter.png)
-
-
-## wrapper介绍
-何为wrapper ?
-就是包装，对原有对象的包装。
-如果spi实现类没有空构造方法并且有一个有参的构造函数，且类型是当前实现的接口。
-那么在最终暴露的对象为此wrapper。
-
-## 实例化代码如下  
-
-- 先加载class，并判断是否为wrapper  
-
-```java
-public class ExtensionLoader<T> {
-  private boolean isWrapperClass(Class<?> clazz) {
-    try {
-      clazz.getConstructor(type);
-      return true;
-    } catch (NoSuchMethodException e) {
-      return false;
-    }
-  }
-
-  private void loadClass(Map<String, Class<?>> extensionClasses, java.net.URL resourceURL, Class<?> clazz, String name,
-                         boolean overridden) throws NoSuchMethodException {
+  // 配置文件中的value字符转为class，并分类管理
+  private void loadClass(Map<String, Class<?>> extensionClasses, java.net.URL resourceURL, Class<?> clazz, String name, boolean overridden) {
     ... 
     if (clazz.isAnnotationPresent(Adaptive.class)) {
-      cacheAdaptiveClass(clazz, overridden);
+      cacheAdaptiveClass(clazz, overridden);// 缓存自适应的实现，如果有多个overridden用来控制是否可覆盖，不能覆盖则直接报错
     }
-    // 判断是否为包装
-    else if (isWrapperClass(clazz)) {
-      cacheWrapperClass(clazz);
+    else if (isWrapperClass(clazz)) { // 如过有一个有参构造，参数类型是spi的接口，那么就是wrapper
+      cacheWrapperClass(clazz); // 缓存包装类，可以有多个。
     } else {
-      clazz.getConstructor();
-      if (StringUtils.isEmpty(name)) {
-        name = findAnnotationName(clazz);
-        ...
-      }
-
-      String[] names = NAME_SEPARATOR.split(name);
-      if (ArrayUtils.isNotEmpty(names)) {
-        cacheActivateClass(clazz, names[0]);
-        for (String n : names) {
-          cacheName(clazz, n);
-          saveInExtensionClass(extensionClasses, clazz, n, overridden);
-        }
+      String[] names = Pattern.compile("\\s*[,]+\\s*").split(name);
+      cacheActivateClass(clazz, names[0]);// 进行分类如果有@Activate注解的话
+      for (String n : names) {
+        cacheName(clazz, n); // 缓存class与对应的名称,不能覆盖。
+        saveInExtensionClass(extensionClasses, clazz, n, overridden);// 保存到 extensionClasses 中，如果name已经存在，overridden用来控制是否可覆盖，否则抛异常
       }
     }
   }
-}
-```
-
-- 初始化判断需要wrap，则进行包装并返回  
-```java
-public class ExtensionLoader<T> {
-    
+  
+  // 根据name获取实例（初始化）
   private T createExtension(String name, boolean wrap) {
     Class<?> clazz = getExtensionClasses().get(name);
-    if (clazz == null) {
-      throw findException(name);
-    }
-    try {
-      T instance = (T) EXTENSION_INSTANCES.get(clazz);
-      if (instance == null) {
-        EXTENSION_INSTANCES.putIfAbsent(clazz, clazz.newInstance());
-        instance = (T) EXTENSION_INSTANCES.get(clazz);
-      }
-      injectExtension(instance);
+    ...
+    // 实例化，忽略缓存的逻辑，只会初始化，一次
+    T instance = clazz.newInstance();
+    injectExtension(instance); // 注入操作，对当前实体中如果有set方法，且没有DisableInject注解，那么以此方法的第一个参数的类型+名称，再次从dubboSPI容器中寻找对应的实例。并set
 
+    // 如果wrap为true
+    if (wrap) {
 
-      // 如果wrap为true
-      if (wrap) {
+      List<Class<?>> wrapperClassesList = new ArrayList<>();
+      wrapperClassesList.addAll(cachedWrapperClasses);
+      wrapperClassesList.sort(WrapperComparator.COMPARATOR);
+      Collections.reverse(wrapperClassesList);
 
-        List<Class<?>> wrapperClassesList = new ArrayList<>();
-        if (cachedWrapperClasses != null) {
-          wrapperClassesList.addAll(cachedWrapperClasses);
-          // 先排序
-          wrapperClassesList.sort(WrapperComparator.COMPARATOR);
-          Collections.reverse(wrapperClassesList);
-        }
-
-        if (CollectionUtils.isNotEmpty(wrapperClassesList)) {
-          for (Class<?> wrapperClass : wrapperClassesList) {
-            Wrapper wrapper = wrapperClass.getAnnotation(Wrapper.class);
-            if (wrapper == null
-                    || (ArrayUtils.contains(wrapper.matches(), name) && !ArrayUtils.contains(wrapper.mismatches(), name))) {
-              // 进行包装
-              instance = injectExtension((T) wrapperClass.getConstructor(type).newInstance(instance));
-            }
+      if (CollectionUtils.isNotEmpty(wrapperClassesList)) {
+        for (Class<?> wrapperClass : wrapperClassesList) {
+          Wrapper wrapper = wrapperClass.getAnnotation(Wrapper.class);
+          // 如果有@Wrapper注解，则根据注解判断是否符合要求
+          if (wrapper == null || (ArrayUtils.contains(wrapper.matches(), name) && !ArrayUtils.contains(wrapper.mismatches(), name))) {
+            // 进行包装
+            instance = injectExtension((T) wrapperClass.getConstructor(type).newInstance(instance));
           }
         }
       }
-
-      initExtension(instance);
-      return instance;
-    } catch (Throwable t) {
-      throw new IllegalStateException("Extension instance (name: " + name + ", class: " +
-              type + ") couldn't be instantiated: " + t.getMessage(), t);
     }
+    ...
+    initExtension(instance); // 如果实现了Lifecycle接口，则调用其生命周期的方法
+    return instance;
   }
 }
 ```
+
+# 总结
+dubboSPI比javaSPI多处好几个功能，我们一般都用不到，但是如果想要了解dubbo工作的整体流程。dubboSPI的代码是必须要掌握的。  
