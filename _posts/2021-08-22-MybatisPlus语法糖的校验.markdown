@@ -9,8 +9,8 @@ tags: [代码规范,mybatisPlus]
 
 我们规定建立一层Manger，用来管理sql的一层。去除xml里面的sql。因为写sql后期不易维护。  
 如果想要使用MybatisPlus则必须[继承此BaseManager]({{ "/重新加装MybatisPlus#5避免空指针使api操作更安全" | relative_url }})。    
-> 一个表对应一个实体、一个mapper，一个manager
-> 实体有公共的BaseDomain,mapper有公共CustomBaseMapper,manager有公共的BaseManager
+> 一个表对应一个实体、一个mapper，一个manager  
+> 实体有公共的BaseDomain,mapper有公共CustomBaseMapper,manager有公共的BaseManager  
 > 我们通过代码依赖校验保证都能正确的继承以上的公共类
 
 **如何有效(强制)的避免以下相同拼接的sql出现在多处？**  
