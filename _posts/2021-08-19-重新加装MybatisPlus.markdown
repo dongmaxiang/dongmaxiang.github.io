@@ -430,20 +430,20 @@ public static <T> String columnToString(SFunction<T, ?> column) {
 
 # 5.避免空指针，使api操作更安全
 
-集成以上所有的特性到一个类中作为一个baseManager。  
-实际项目中一个表对应一个实体，一个mapper，当然也需要一个manager，继承此manager就可以顺心的使用了。  
-我们manager的职责就是用来拼接sql的。避免sql东一处西一处，不好维护。强制校验把sql写在manager类中👉[MybatisPlus语法糖的校验]({{ "/MybatisPlus语法糖的校验" | relative_url }})
-然后service的业务代码，调用manager写好的sql即可。**service层不关心sql**。
+集成以上所有的特性到一个类中作为一个baseDao。  
+实际项目中一个表对应一个实体，一个mapper，当然也需要一个Dao，继承此Dao就可以顺心的使用了。  
+我们Dao的职责就是用来拼接sql的。避免sql东一处西一处，不好维护。强制校验把sql写在Dao类中👉[MybatisPlus语法糖的校验]({{ "/MybatisPlus语法糖的校验" | relative_url }})
+然后service的业务代码，调用Dao写好的sql即可。**service层不关心sql**。
 
 ```java
 /**
- * 和业务无关，所有数据库表的manager继承此类
+ * 和业务无关，所有数据库表的Dao继承此类
  * manger基类 （ 泛型：M 是 mapper 对象，T 是数据库实体 ）
  * 1：修改原有的api，使api操作更安全
  * 2：逻辑删除时使用填充删除
  * 3: lambda转换成字段名，可以随时随地用啦
  */
-public abstract class BaseManager<M extends CustomBaseMapper<T>, T extends BaseDomain<? extends Serializable>> extends ServiceImpl<M, T> {
+public abstract class BaseDao<M extends CustomBaseMapper<T>, T extends BaseDomain<? extends Serializable>> extends ServiceImpl<M, T> {
 
     /**
      * 简写方法名
@@ -587,7 +587,7 @@ public abstract class BaseManager<M extends CustomBaseMapper<T>, T extends BaseD
                     return Collections.emptyList();
                 }
                 // 调用忽略逻辑删除的列表api
-                return BaseManager.this.getBaseMapper().selectListIgnoreDeleted(wrapperChildren);
+                return BaseDao.this.getBaseMapper().selectListIgnoreDeleted(wrapperChildren);
             }
         };
 

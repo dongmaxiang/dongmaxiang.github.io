@@ -7,7 +7,6 @@ tags: [js,开发工具类]
 ---
 
 觉得手动copy麻烦的话，写一个小脚本，执行即可copy  
-提示用户体验
 
 ```javascript
 // 获取val
