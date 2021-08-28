@@ -16,20 +16,21 @@ tags: [代码规范,spring]
    - 如果后期维护某一张表的时候你就得需要屡下所有调用此表的service，花费时间不说，还有可能漏掉。
    - 如果对其中一个表进行别的业务复用的话，则需要把代码抽离出来，并且有可能开发人员不抽离，而是直接copy粘贴，导致代码原来越乱。
 > 所以建议一个表对应一个dao和一个service，其中service只能操作自己的表(dao)。要是操作其他的表只能依赖其对应的service
-2. 没有强制的依赖校验。如果controller直接引用dao层也可以正常运行。会增加后期维护的困难性
-3. 上图没有明确表明哪些是可以互相依赖(service依赖其他service，dao可以依赖其他dao...)，哪些不可以互相依赖。所以我们认为都是可以相互依赖的。互相依赖比较混乱。
+2. 上图没有明确表明哪些是可以互相依赖(service依赖其他service，dao可以依赖其他dao...)，哪些不可以互相依赖。所以我们认为都是可以相互依赖的。互相依赖比较混乱。
 > dao专门负责管理sql，如果对一个实体的curd还涉及到另外其他的实体curd。那么这就显然属于业务范畴了，应该放在service。所以在dao这一层。我们不能让他操作多张表(不能有互相依赖)
+3. 没有强制的依赖校验。如果controller直接引用dao层也可以正常运行。会增加后期维护的困难性
    
 # 代码依赖的强制校验
 对于代码依赖校验，按照以上几个点来校验的话
 1. 首先得定义一个dao层，确保一个表的curd的sql不会乱出现别的dao地方。所以用到[mybatisPlus的sql语法糖校验]({{ "/MybatisPlus语法糖的校验" | relative_url }})  
 2. 其次不同层有不同的依赖规则。  
    - 如controller不能依赖dao，
-   - service不能依赖其他dao(表)
+   - service不能依赖其他dao(表)，只能依赖自己的dao
    - dao不能有相互依赖。  
 
 不同层有不用的配置,所以我们需要一个可配置的注解
 ## 校验依赖的注解
+此注解只能放在package上。代表对此包以及子包里面spring管理的bean进行校验
 ```java
 @Target(ElementType.PACKAGE)
 @Retention(RetentionPolicy.RUNTIME)
@@ -69,158 +70,180 @@ public @interface PackageCheck {
 }
 ```
 
-## 待spring容器的bean依赖都初始化之后进行校验
+## 注解校验的配置
+1. controller层
+在controller包结构目录下新建一个packang-info.java。然后用此注解配置校验的内容  
+```java
+   @CodeVerify.PackageCheck(classMustExtendClass = BaseController.class // 所有的controller必须要继承此类，可有可无
+   , mustNamePattern = ".*Controller$" // controller命名必须匹配该正则
+   , notAllowDependPackageNames = {"mapper层的包名称", "dao层的包名称"}) // controller不能直接依赖dao，也不能直接依赖mapper。（只能通过service调用）
+```
+   
+2. service层
+在service包结构目录下新建一个packang-info.java。然后用此注解配置校验的内容  
+```java
+   @CodeVerify.PackageCheck(classMustExtendClass = BaseService.class// 所有的service必须要继承此类，可有可无
+        , mustNamePattern = ".*Service(Impl)?$"// 该包下spring管理的bean命名必须匹配该正则
+        , notAllowDependPackageNames = {"mapper层的包名称"} // 不能直接依赖mapper层，只能通过依赖dao。
+        , dependOnly = BaseDao.class)//只能依赖一个Dao，一般都是一个表，一个mapper，一个dao，一个service
+```
+   
+3. dao层
+```java
+@CodeVerify.PackageCheck(classMustExtendClass = BaseDAO.class
+        , mustNamePattern = ".*Dao$"
+        , notAllowDependPackageNames = {}// 如果dao的java代码可以引用service不报错，可以配置不能依赖service包。因为我们项目是分模块，如果用service代码编译器会直接报错，所以写不写都没有必要
+        , interdependenceOnSamePackage = false) // 不允许有互相依赖，一个dao只能管理自己的表，如果涉及到其他表则应该放在service处理。
+```
+
+## 开始校验
+可以参考[springBoot容器启动流程]({{ "/springBoot容器启动流程" | relative_url }})
 
 ```java
 @Slf4j
-public static class DependCheck implements BeanFactoryAware, ApplicationListener<ApplicationStartedEvent> {
+public static class DependCheck implements ApplicationListener<ApplicationStartedEvent> {
+
+   @SneakyThrows
+   @Override
+   public void onApplicationEvent(ApplicationStartedEvent event) {
+      ConfigurableListableBeanFactory beanFactory = event.getApplicationContext().getBeanFactory();
+      
+      // 所有需要校验的包。Package.getPackages()只有对应的package有真正的类才算是真正的一个package，只有Package-info.java是不行的
+      List<Package> checkPackageList = Arrays.stream(Package.getPackages())
+              .filter(t -> t.isAnnotationPresent(PackageCheck.class))// 把需要校验的过滤出来
+              .collect(Collectors.toList());
+
+      String[] allBeanNames = beanFactory.getBeanDefinitionNames(); // 获取所有的bean
+
+      List<String> errorMessageList = Lists.newArrayList();
+
+      log.info("check PackageNames:{}", checkPackageList);
+      for (Package checkPackage : checkPackageList) {
+         PackageCheck annotation = checkPackage.getAnnotation(PackageCheck.class);
+         log.info("DependCheck starting package:{}, configuration:{}", checkPackage.getName(), annotation);
+
+         // 校验的条件
+         String[] excludeSubPackages = annotation.checkExcludeSubPackages();
+         Class<?> mustExtendClass = annotation.classMustExtendClass();
+         String mustSuffixName = annotation.mustNamePattern();
+         String[] notAllowDependPackageNames = annotation.notAllowDependPackageNames();
+         boolean interdependenceOnSamePackage = annotation.interdependenceOnSamePackage();
+         Class<?>[] dependOnly = annotation.dependOnly();
+         Class<?>[] exclusionsClass = annotation.exclusionClass();
 
 
-    private DefaultListableBeanFactory beanFactory;
-
-    @Override
-    public void setBeanFactory(BeanFactory beanFactory) {
-        this.beanFactory = (DefaultListableBeanFactory) beanFactory;
-    }
-
-    @SneakyThrows
-    @Override
-    public void onApplicationEvent(ApplicationStartedEvent event) {
-        log.info("begin code check");
-        if (ENV.isProd()) {
-            log.info("Non-dev does not check");
-            return;
-        }
-        List<Package> checkPackageList = Arrays.stream(Package.getPackages())
-                .filter(t -> t.isAnnotationPresent(PackageCheck.class))
-                .collect(Collectors.toList());
-
-        String[] allBeanNames = beanFactory.getBeanDefinitionNames();
-
-        List<String> errorMessageList = Lists.newArrayList();
-
-        log.info("check PackageNames:{}", checkPackageList);
-        for (Package checkPackage : checkPackageList) {
-            PackageCheck annotation = checkPackage.getAnnotation(PackageCheck.class);
-            log.info("DependCheck starting package:{}, configuration:{}", checkPackage.getName(), annotation);
-
-            String[] excludeSubPackages = annotation.checkExcludeSubPackages();
-            Class<?> mustExtendClass = annotation.classMustExtendClass();
-            String mustSuffixName = annotation.mustNamePattern();
-            String[] notAllowDependPackageNames = annotation.notAllowDependPackageNames();
-            boolean interdependenceOnSamePackage = annotation.interdependenceOnSamePackage();
-            Class<?>[] dependOnly = annotation.dependOnly();
-            Class<?>[] exclusionsClass = annotation.exclusionClass();
-
-
-            String currentPackage = checkPackage.getName();
-            for (String beanName : allBeanNames) {
-                BeanDefinition mergedBeanDefinition = beanFactory.getMergedBeanDefinition(beanName);
-                String beanClassName = mergedBeanDefinition.getResolvableType().getType().getTypeName();
-                if (!beanClassName.startsWith(currentPackage)) {
-                    continue;
-                }
-
-                boolean excludeSubPackage = Arrays.stream(excludeSubPackages)
-                        .anyMatch(t -> beanClassName.substring(currentPackage.length()).contains(t));
-                if (excludeSubPackage) {
-                    continue;
-                }
-
-                Class<?> beanClass = Class.forName(beanClassName);
-                boolean exclusionClass = Arrays.stream(exclusionsClass)
-                        .anyMatch(beanClass::isAssignableFrom);
-                if (exclusionClass) {
-                    continue;
-                }
-
-                // 当前bean的依赖
-                String[] beanDependenciesName = beanFactory.getDependenciesForBean(beanName);
-                List<Class<?>> beanDependenciesClass = Arrays.stream(beanDependenciesName)
-                        .map(beanFactory::getMergedBeanDefinition)
-                        .map(BeanDefinition::getResolvableType)
-                        .map(ResolvableType::getRawClass)
-                        .collect(Collectors.toList());
-
-
-                // 不允许依赖其他的包
-                if (ArrayUtils.isNotEmpty(notAllowDependPackageNames)) {
-
-                    boolean match = Arrays.stream(notAllowDependPackageNames)
-                            .anyMatch(notAllowDependPackageName ->
-                                    beanDependenciesClass.stream()
-                                            .map(Class::getName)
-                                            .anyMatch(className ->
-                                                    className.startsWith(notAllowDependPackageName)
-                                            )
-                            );
-
-                    if (match) {
-                        String msg = MessageFormat.format(
-                                "类:{0}，不能依赖{1}包的内容. \n\t目前依赖的有:{2}"
-                                , beanClassName
-                                , Arrays.toString(notAllowDependPackageNames)
-                                , Arrays.toString(beanDependenciesName)
-                        );
-                        errorMessageList.add("依赖不规范:\n\t" + msg);
-                    }
-                }
-
-                // 不能有相互依赖
-                if (!interdependenceOnSamePackage) {
-                    boolean match = beanDependenciesClass.stream()
-                            .map(Class::getName)
-                            .anyMatch(dependTypeName -> dependTypeName.startsWith(currentPackage));
-                    if (match) {
-                        String msg = MessageFormat.format(
-                                "类:{0}，不能依赖同包及子包的类. \n\t目前依赖的有:{1}"
-                                , beanClassName
-                                , Arrays.toString(beanDependenciesName)
-                        );
-                        errorMessageList.add("依赖不规范:\n\t" + msg);
-                    }
-                }
-
-                // 依赖的类型有且只能有一个
-                if (ArrayUtils.isNotEmpty(dependOnly)) {
-
-                    boolean match = Arrays.stream(dependOnly)
-                            .anyMatch(dependOnlyClass ->
-                                    beanDependenciesClass.stream()
-                                            .filter(dependOnlyClass::isAssignableFrom)
-                                            .count() > 1
-                            );
-
-                    if (match) {
-                        String msg = MessageFormat.format(
-                                "类:{0}，依赖的类型有且只能有一个{1}, \n\t目前依赖的有:{2}"
-                                , beanClassName
-                                , Arrays.toString(dependOnly)
-                                , Arrays.toString(beanDependenciesName)
-                        );
-                        errorMessageList.add("依赖不规范:\n\t" + msg);
-                    }
-                }
-
-                boolean configBean = beanClass.isAnnotationPresent(ConfigurationProperties.class) || beanClass.isAnnotationPresent(Component.class);
-
-                if (!configBean && !mustExtendClass.isAssignableFrom(beanClass)) {
-                    errorMessageList.add("类继承不规范:\n\t" + beanClassName + "必须继承" + mustExtendClass);
-                }
-                if (!configBean && !beanClassName.matches(mustSuffixName)) {
-                    errorMessageList.add("名称不规范:\n\t" + beanClassName + "名称格式必须是:" + mustSuffixName);
-                }
-
+         String currentPackage = checkPackage.getName();
+         for (String beanName : allBeanNames) {
+            BeanDefinition mergedBeanDefinition = beanFactory.getMergedBeanDefinition(beanName);
+            String beanClassName = mergedBeanDefinition.getResolvableType().getType().getTypeName();
+            if (!beanClassName.startsWith(currentPackage)) { // 只有这个package的包才会校验
+               continue;
             }
 
-        }
-        if (!errorMessageList.isEmpty()) {
-            throw new RuntimeException("代码编写不规范\n" + String.join("\n", errorMessageList)) {
-                public Throwable fillInStackTrace() {
-                    return this;
-                }
-            };
-        }
-    }
+            boolean excludeSubPackage = Arrays.stream(excludeSubPackages)
+                    .anyMatch(t -> beanClassName.substring(currentPackage.length()).contains(t)); // 排除子包的校验，如果有的话
+            if (excludeSubPackage) {
+               continue;
+            }
+
+            Class<?> beanClass = Class.forName(beanClassName);
+            boolean exclusionClass = Arrays.stream(exclusionsClass) // 排除class的校验，如果有的话
+                    .anyMatch(beanClass::isAssignableFrom);
+            if (exclusionClass) {
+               continue;
+            }
+
+            // 当前bean的依赖
+            String[] beanDependenciesName = beanFactory.getDependenciesForBean(beanName);
+            List<Class<?>> beanDependenciesClass = Arrays.stream(beanDependenciesName)
+                    .map(beanFactory::getMergedBeanDefinition)
+                    .map(BeanDefinition::getResolvableType)
+                    .map(ResolvableType::getRawClass)
+                    .collect(Collectors.toList());
+
+
+            // 不允许依赖其他的包
+            if (ArrayUtils.isNotEmpty(notAllowDependPackageNames)) {
+
+               boolean match = Arrays.stream(notAllowDependPackageNames)
+                       .anyMatch(notAllowDependPackageName ->
+                               beanDependenciesClass.stream()
+                                       .map(Class::getName)
+                                       .anyMatch(className ->
+                                               className.startsWith(notAllowDependPackageName)
+                                       )
+                       );
+
+               if (match) {
+                  String msg = MessageFormat.format(
+                          "类:{0}，不能依赖{1}包的内容. \n\t目前依赖的有:{2}"
+                          , beanClassName
+                          , Arrays.toString(notAllowDependPackageNames)
+                          , Arrays.toString(beanDependenciesName)
+                  );
+                  errorMessageList.add("依赖不规范:\n\t" + msg);
+               }
+            }
+
+            // 不能有相互依赖
+            if (!interdependenceOnSamePackage) {
+               boolean match = beanDependenciesClass.stream()
+                       .map(Class::getName)
+                       .anyMatch(dependTypeName -> dependTypeName.startsWith(currentPackage));
+               if (match) {
+                  String msg = MessageFormat.format(
+                          "类:{0}，不能依赖同包及子包的类. \n\t目前依赖的有:{1}"
+                          , beanClassName
+                          , Arrays.toString(beanDependenciesName)
+                  );
+                  errorMessageList.add("依赖不规范:\n\t" + msg);
+               }
+            }
+
+            // 依赖的类型有且只能有一个
+            if (ArrayUtils.isNotEmpty(dependOnly)) {
+
+               boolean match = Arrays.stream(dependOnly)
+                       .anyMatch(dependOnlyClass ->
+                               beanDependenciesClass.stream()
+                                       .filter(dependOnlyClass::isAssignableFrom)
+                                       .count() > 1
+                       );
+
+               if (match) {
+                  String msg = MessageFormat.format(
+                          "类:{0}，依赖的类型有且只能有一个{1}, \n\t目前依赖的有:{2}"
+                          , beanClassName
+                          , Arrays.toString(dependOnly)
+                          , Arrays.toString(beanDependenciesName)
+                  );
+                  errorMessageList.add("依赖不规范:\n\t" + msg);
+               }
+            }
+
+            boolean configBean = beanClass.isAnnotationPresent(ConfigurationProperties.class) || beanClass.isAnnotationPresent(Component.class);
+
+            if (!configBean && !mustExtendClass.isAssignableFrom(beanClass)) {
+               errorMessageList.add("类继承不规范:\n\t" + beanClassName + "必须继承" + mustExtendClass);
+            }
+            if (!configBean && !beanClassName.matches(mustSuffixName)) {
+               errorMessageList.add("名称不规范:\n\t" + beanClassName + "名称格式必须是:" + mustSuffixName);
+            }
+
+         }
+
+      }
+      if (!errorMessageList.isEmpty()) {
+         throw new RuntimeException("代码编写不规范\n" + String.join("\n", errorMessageList)) {
+            public Throwable fillInStackTrace() {
+               return this;
+            }
+         };
+      }
+   }
 }
 ```
+
+# 总结
+代码校验可以帮助我们必须按照这种规范来。为项目的高质量代码迈出了一大步。协同开发必备。  
+如果按照传统的
