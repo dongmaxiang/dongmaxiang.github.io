@@ -89,6 +89,9 @@ public @interface PackageCheck {
 ```
    
 3. dao层
+建议Dao统一[继承此BaseDao]({{ "/重新加装MybatisPlus#5避免空指针使api操作更安全" | relative_url }})  
+一个表的所有sql按照规范写在同一个类中[mybatisPlus的sql语法糖强制校验]({{ "/MybatisPlus语法糖的校验" | relative_url }})  
+   
 ```java
 @CodeVerify.PackageCheck(classMustExtendClass = BaseDAO.class
         , mustNamePattern = ".*Dao$"
@@ -97,7 +100,8 @@ public @interface PackageCheck {
 ```
 
 ## 开始校验
-可以参考[springBoot容器启动流程]({{ "/springBoot容器启动流程" | relative_url }})
+待容器启动后，所有bean的依赖的关系已形成，我们就可以校验了。
+> 可以参考[springBoot容器启动流程]({{ "/springBoot容器启动流程" | relative_url }})
 
 ```java
 @Slf4j
@@ -245,5 +249,15 @@ public static class DependCheck implements ApplicationListener<ApplicationStarte
 ```
 
 # 总结
-代码校验可以帮助我们必须按照这种规范来。为项目的高质量代码迈出了一大步。协同开发必备。  
-如果按照传统的
+由于每个团队，每个项目工程的规范都不同。所以我们根据注解的配置进行校验。  
+在结合[mybatisPlus语法糖校验]({{ "/MybatisPlus语法糖的校验" | relative_url }})，保证sql只允许出现在一处，确保我们的项目curd不会过于混乱。  
+以本文的代码分层为规范的技术思想，不同于DDD领域驱动设计的是：按照本文设计的规范，在应用过于庞大或复杂的情况下我们还能保证业务代码不会归于臃肿、林乱不堪。
+
+引用知乎的DDD驱动设计的简介。
+> DDD解决的问题是单体应用过大过于复杂导致开发团队的成员没有人能够了解业务全貌，换句话说程序的复杂度失控了。
+> 比如你有一个方法上千行，肯定难以维护，所以你要拆。但是一个应用你怎么拆？传统的拆分角度的出发点是基于技术，比如三层架构，比如前后分离。但是这样的拆分不能降低业务的复杂度。
+> DDD就是用来划分业务边界的。DDD不是架构思想，是统筹规划软件开发的思想。
+> 很多架构模式应用到DDD设计的系统里。其实你用DDD拆分出来的服务用传统的代码组织方式(传统的分层,repository, service, controller)也完全没有问题
+
+DDD就是用来划分业务边界的。同理，一个dao对应一张表，并且对应一个实体。然后我们保证一个dao只能由一个service操作，换句话说一个service只能操作一个dao。  
+那么这种分层方式和DDD领取驱动设计的精髓有相似（重合）之处。再不用学习DDD的情况下还能保证我们的代码不会过誉的混乱，也只有这种更精细的分层方式了。
