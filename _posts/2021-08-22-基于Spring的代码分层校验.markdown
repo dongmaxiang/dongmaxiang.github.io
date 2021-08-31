@@ -259,7 +259,8 @@ public static class DependCheck implements ApplicationListener<ApplicationStarte
 > DDD就是用来划分业务边界的。DDD不是架构思想，是统筹规划软件开发的思想。
 > 很多架构模式应用到DDD设计的系统里。其实你用DDD拆分出来的服务用传统的代码组织方式(传统的分层,repository, service, controller)也完全没有问题
 
-DDD就是用来划分业务边界的。同理，一个dao对应一张表，并且对应一个实体。然后我们保证一个dao只能由一个service操作，换句话说一个service只能操作一个dao。  
+DDD就是用来划分业务边界的。但是DDD设计在普通的CURD应用开发中很难运用好，大部分都是分层的设计。但是我们可以吸取DDD的好处，并结合分层设计的思想来处理我们的业务代码  
+所以规范一张表对应一个实体，并且对应一个dao。然后我们保证一个dao只能由一个service操作，换句话说一个service只能操作一个dao，操作其他dao只能依赖其对应的service。  
 那么这种分层方式和DDD领取驱动设计的精髓有相似（重合）之处。在不用学习DDD的前提下还能保证我们的代码不会过于的混乱，也只有这种更精细的分层方式了。
 > 贫血模型：普通bean的一些内置get|set毫无意义，这就叫贫血模型。  
 > 充血模型：由于DDD的设计思想就是把bean里面塞满各种各样的自身业务逻辑。使此bean所有的操作都能聚合在一个bean(domain)中。这就叫充血模型。
