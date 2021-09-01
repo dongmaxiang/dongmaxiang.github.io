@@ -243,6 +243,7 @@ public class DispatcherServlet extends FrameworkServlet {
          }
 
          // 进行method反射调用，调用之前会参数组装、参数校验等逻辑。有异常则会直接抛出
+         // RequestMappingHandlerAdapter执行handler时，会组装参数、参数校验、并处理返回的结果
          mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
          ...
          // 调用后置拦截器
