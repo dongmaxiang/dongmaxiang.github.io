@@ -193,24 +193,13 @@ public class ServletContextInitializerBeans extends AbstractCollection<ServletCo
 
 # dispatcher正常执行流程
 大体流程分为
-1. 获取handler(包含拦截器)
-1. 获取handlerAdaptor(真正执行handler的包装)
-1. 执行interceptor
-1. 执行方法参数转换
-1. 方法参数校验
-1. 执行业务逻辑代码
-1. 执行响应结果处理
-
-# dispatcher错误执行流程
-常见的错误有
-1. 404
-2. get方式访问只允许post的接口。
-3. 参数转换异常
-4. 参数校验异常
-5. 逻辑处理异常
-6. ...等其他不常见的异常
-
-
+1. 通过request从HandlerMapping获取HandlerExecutionChain（包含了handler和拦截器）
+1. 通过handler获取handlerAdaptor(真正执行handler的处理器)
+1. 如果资源可以复用（未修改），直接返回304，由handlerAdaptor提供服务
+1. 执行前置拦截器interceptor，返回false不允许往下执行
+1. 由handlerAdaptor执行handler的逻辑并返回modelAndView
+1. 执行后置拦截器interceptor
+1. 根据modelAndView或者执行期间捕获的exception处理最终的响应
 
 ```java
 public class DispatcherServlet extends FrameworkServlet {
@@ -225,7 +214,9 @@ public class DispatcherServlet extends FrameworkServlet {
       Exception dispatchException = null; // 处理遇到的异常
       try {
          ...
-         // 获取本次请求request的处理器，以及拦截器
+         // 通过request从HandlerMapping获取本次请求的handler(包含拦截器)
+         // 默认写的controller里面的方法，handler=org.springframework.web.method.HandlerMethod
+         // HandlerMethod默认由org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping提供
          mappedHandler = getHandler(processedRequest);
          if (mappedHandler == null) {
             // 404处理 
@@ -233,7 +224,8 @@ public class DispatcherServlet extends FrameworkServlet {
             return;
          }
 
-         // 执行handler的适配器。
+         // 获取执行handler的适配器。
+         // 默认写的controller里面的方法，spring默认由org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter提供执行服务
          HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
 
          // 304。资源复用。
@@ -266,3 +258,15 @@ public class DispatcherServlet extends FrameworkServlet {
    }
 }
 ```
+
+# dispatcher错误执行流程
+常见的错误有
+1. 404
+2. get方式访问只允许post的接口。
+3. 参数转换异常
+4. 参数校验异常
+5. 逻辑处理异常
+6. ...等其他不常见的异常
+
+
+# RequestMappingHandlerAdapter
