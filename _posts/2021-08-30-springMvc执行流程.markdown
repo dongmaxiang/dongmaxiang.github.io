@@ -272,112 +272,140 @@ dispatcherServlet在获取对应的Handler时，根据UrlPathHelper从request获
 此时handlerMethod可能为空，为1个，甚至为多个，然后再从中选取最优的  
 ### 注册的逻辑
 ```java
-public void register(T mapping, Object handler, Method method) {
-    this.readWriteLock.writeLock().lock();
-    try {
-        HandlerMethod handlerMethod = createHandlerMethod(handler, method);// HandlerMethod包含了bean和对应的method
-        validateMethodMapping(handlerMethod, mapping);// 验证@RequestMapping注解不能出现重复的值
-        this.mappingLookup.put(mapping, handlerMethod);
+class MappingRegistry {
+    ...
+    public void register(T mapping, Object handler, Method method) {
+        this.readWriteLock.writeLock().lock();
+        try {
+            HandlerMethod handlerMethod = createHandlerMethod(handler, method);// HandlerMethod包含了bean和对应的method
+            validateMethodMapping(handlerMethod, mapping);// 验证@RequestMapping注解不能出现重复的值
+            this.mappingLookup.put(mapping, handlerMethod);
 
-        List<String> directUrls = getDirectUrls(mapping);// 获取@RequestMapping的url（direct：不包含"*"、"?"、"{"、"}"符合的url）
-        for (String url : directUrls) {
-            this.urlLookup.add(url, mapping);
+            List<String> directUrls = getDirectUrls(mapping);// 获取@RequestMapping的url（direct：不包含"*"、"?"、"{"、"}"符合的url）
+            for (String url : directUrls) {
+                this.urlLookup.add(url, mapping);
+            }
+            ...
+            // 处理跨域@CrossOrigin的注解
+            CorsConfiguration corsConfig = initCorsConfiguration(handler, method, mapping);
+            if (corsConfig != null) {
+                this.corsLookup.put(handlerMethod, corsConfig);// 保存跨域的注解，后期由CorsInterceptor来处理跨域的信息
+            }
+            ...
+        } finally {
+            this.readWriteLock.writeLock().unlock();
         }
-...
-        // 处理跨域@CrossOrigin的注解
-        CorsConfiguration corsConfig = initCorsConfiguration(handler, method, mapping);
-        if (corsConfig != null) {
-            this.corsLookup.put(handlerMethod, corsConfig);// 保存跨域的注解，后期由CorsInterceptor来处理跨域的信息
-        }
-        ...
     }
-    finally {
-        this.readWriteLock.writeLock().unlock();
-    }
+    ...
 }
 ```
 
 ### 选取最优的逻辑
 ```java
 // 部分源码
-protected HandlerMethod lookupHandlerMethod(String lookupPath, HttpServletRequest request) throws Exception {
-    List<Match> matches = new ArrayList<>();
-    // 根据uri直接获取
-    List<T> directPathMatches = this.mappingRegistry.getMappingsByUrl(lookupPath);
-    if (directPathMatches != null) {
-        addMatchingMappings(directPathMatches, matches, request);
-    }
-    // 为空可能为restful风格，需要遍历所有的接口 原文：No choice but to go through all mappings...
-    if (matches.isEmpty()) {
-        addMatchingMappings(this.mappingRegistry.getMappings().keySet(), matches, request);
-    }
-
-    if (!matches.isEmpty()) {
-        Match bestMatch = matches.get(0);
-        // 获取最优的接口
-        if (matches.size() > 1) {
-            Comparator<Match> comparator = new MatchComparator(getMappingComparator(request));// 选取最优逻辑的排序器
-            matches.sort(comparator);
-            bestMatch = matches.get(0);
-            // 如果是预检请求直接返回一个预检的handler代表已匹配，但是预检请求并不会真正的执行，注意：只有大于2个handler时才会返回，这是因为预检请求和真实请求可能header或参数不一样。无法精确匹配handler
-            if (CorsUtils.isPreFlightRequest(request)) {
-                return PREFLIGHT_AMBIGUOUS_MATCH;
-            }
-            if (comparator.compare(bestMatch, matches.get(1)) == 0) {
-                // 选择不了最优的接口直接抛异常
-                throw new IllegalStateException(...);
-            }
+public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMapping implements InitializingBean {
+    ...
+    protected HandlerMethod lookupHandlerMethod(String lookupPath, HttpServletRequest request) throws Exception {
+        List<Match> matches = new ArrayList<>();
+        // 根据uri直接获取
+        List<T> directPathMatches = this.mappingRegistry.getMappingsByUrl(lookupPath);
+        if (directPathMatches != null) {
+            addMatchingMappings(directPathMatches, matches, request);
         }
-        ...
-        return bestMatch.handlerMethod;
-    } else {
-        return null;
+        // 为空可能为restful风格，需要遍历所有的接口 原文：No choice but to go through all mappings...
+        if (matches.isEmpty()) {
+            addMatchingMappings(this.mappingRegistry.getMappings().keySet(), matches, request);
+        }
+    
+        if (!matches.isEmpty()) {
+            Match bestMatch = matches.get(0);
+            // 获取最优的接口
+            if (matches.size() > 1) {
+                Comparator<Match> comparator = new MatchComparator(getMappingComparator(request));// 选取最优逻辑的排序器
+                matches.sort(comparator);
+                bestMatch = matches.get(0);
+                // 如果是预检请求直接返回一个预检的handler代表已匹配，但是预检请求并不会真正的执行，注意：只有大于2个handler时才会返回，这是因为预检请求和真实请求可能header或参数不一样。无法精确匹配handler
+                if (CorsUtils.isPreFlightRequest(request)) {
+                    return PREFLIGHT_AMBIGUOUS_MATCH;
+                }
+                if (comparator.compare(bestMatch, matches.get(1)) == 0) {
+                    // 选择不了最优的接口直接抛异常
+                    throw new IllegalStateException(...);
+                }
+            }
+            ...
+            return bestMatch.handlerMethod;
+        } else {
+            return null;
+        }
     }
+    ...
 }
 ```
 
-## 多个HandlerMethod时选择最优的匹配
+## 多个@RequestMapping时选择最优的匹配
+如以下几个配置
+* @RequestMapping(value = "*", headers = "content-type=text/*", method = RequestMethod.POST)  
+* @RequestMapping(value = "/abc/*", method = RequestMethod.GET)
+* @RequestMapping(value = "/abc/{id}", params = "abc=123")
 
+如果请求地址为 /abc/123，则都会匹配这三个RequestMapping，那么是如何选取最优的呢？
+
+1. 如果request请求是head方法，则优先匹配方法一致的  
+   method = RequestMethod.HEAD
+1. 然后再次匹配pattern精度比较高的
+1. 匹配params  
+   params = "abc=123"
+1. 匹配headers  
+   headers = "content-type=text/*"
+1. consumers
+1. produces
+1. method
+   
 ```java
-public int compareTo(RequestMappingInfo other, HttpServletRequest request) {
-    int result;
-    // Automatic vs explicit HTTP HEAD mapping
-    if (HttpMethod.HEAD.matches(request.getMethod())) {
+public final class RequestMappingInfo implements RequestCondition<RequestMappingInfo> {
+    ...
+    public int compareTo(RequestMappingInfo other, HttpServletRequest request) {
+        int result;
+        // Automatic vs explicit HTTP HEAD mapping
+        if (HttpMethod.HEAD.matches(request.getMethod())) {
+            result = this.methodsCondition.compareTo(other.getMethodsCondition(), request);
+            if (result != 0) {
+                return result;
+            }
+        }
+        result = this.patternsCondition.compareTo(other.getPatternsCondition(), request);
+        if (result != 0) {
+            return result;
+        }
+        result = this.paramsCondition.compareTo(other.getParamsCondition(), request);
+        if (result != 0) {
+            return result;
+        }
+        result = this.headersCondition.compareTo(other.getHeadersCondition(), request);
+        if (result != 0) {
+            return result;
+        }
+        result = this.consumesCondition.compareTo(other.getConsumesCondition(), request);
+        if (result != 0) {
+            return result;
+        }
+        result = this.producesCondition.compareTo(other.getProducesCondition(), request);
+        if (result != 0) {
+            return result;
+        }
+        // Implicit (no method) vs explicit HTTP method mappings
         result = this.methodsCondition.compareTo(other.getMethodsCondition(), request);
         if (result != 0) {
             return result;
         }
+        result = this.customConditionHolder.compareTo(other.customConditionHolder, request);
+        if (result != 0) {
+            return result;
+        }
+        return 0;
     }
-    result = this.patternsCondition.compareTo(other.getPatternsCondition(), request);
-    if (result != 0) {
-        return result;
-    }
-    result = this.paramsCondition.compareTo(other.getParamsCondition(), request);
-    if (result != 0) {
-        return result;
-    }
-    result = this.headersCondition.compareTo(other.getHeadersCondition(), request);
-    if (result != 0) {
-        return result;
-    }
-    result = this.consumesCondition.compareTo(other.getConsumesCondition(), request);
-    if (result != 0) {
-        return result;
-    }
-    result = this.producesCondition.compareTo(other.getProducesCondition(), request);
-    if (result != 0) {
-        return result;
-    }
-    // Implicit (no method) vs explicit HTTP method mappings
-    result = this.methodsCondition.compareTo(other.getMethodsCondition(), request);
-    if (result != 0) {
-        return result;
-    }
-    result = this.customConditionHolder.compareTo(other.customConditionHolder, request);
-    if (result != 0) {
-        return result;
-    }
-    return 0;
+    ...
 }
 ```
 
