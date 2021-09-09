@@ -42,7 +42,7 @@ ServletContextInitializer、Filter、Servlet、ServletContextAttributeListener�
 
 ## 代码流程
 ```java
-// servletContext会创建WebServer
+// servletContext会创建WebServer,该context为spring的容器上下文
 public class ServletWebServerApplicationContext extends GenericWebApplicationContext implements ConfigurableWebServerApplicationContext {
 ...
     // onRefresh是在refresh阶段调用的
@@ -214,9 +214,7 @@ public class DispatcherServlet extends FrameworkServlet {
       Exception dispatchException = null; // 处理遇到的异常
       try {
          ...
-         // 通过request从HandlerMapping获取本次请求的handler(包含拦截器)
-         // 默认写的controller里面的方法，handler=org.springframework.web.method.HandlerMethod
-         // HandlerMethod默认由org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping提供
+         // controller里面的方法：默认由RequestMappingHandlerMapping提供handler=org.springframework.web.method.HandlerMethod
          mappedHandler = getHandler(processedRequest);
          if (mappedHandler == null) {
             // 404处理 
@@ -225,7 +223,7 @@ public class DispatcherServlet extends FrameworkServlet {
          }
 
          // 获取执行handler的适配器。
-         // 默认写的controller里面的方法，spring默认由org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter提供执行服务
+         // controller里面的方法，默认由org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter提供执行服务
          HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
 
          // 304。资源复用。
@@ -242,8 +240,13 @@ public class DispatcherServlet extends FrameworkServlet {
             return;
          }
 
-         // 进行method反射调用，调用之前会参数组装、参数校验等逻辑。有异常则会直接抛出
-         // RequestMappingHandlerAdapter执行handler时，会组装参数、参数校验、并处理返回的结果
+         /*
+          进行method调用
+          RequestMappingHandlerAdapter执行HandlerMethod时，会通过ServletInvocableHandlerMethod静态代理HandlerMethod
+          ServletInvocableHandlerMethod调用之前会组装(bind)参数
+          bind参数需要获取参数名称,默认提供者：DefaultParameterNameDiscoverer
+          以及根据参数名称获取对应的值，默认提供者：
+          */
          mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
          ...
          // 调用后置拦截器
@@ -257,6 +260,124 @@ public class DispatcherServlet extends FrameworkServlet {
       processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
       ...
    }
+}
+```
+
+## @RequestMapping方法提供者-RequestMappingHandlerMapping
+
+RequestMappingHandlerMapping在初始化时会把所有带有@Controller注解或者@RequestMapping注解的bean解析    
+然后把@RequestMapping对应的url和对应的方法(bean和method)绑定到MappingRegistry(MultiValueMap类型)中：key为uri，value为HandlerMethod。  
+dispatcherServlet在获取对应的Handler时，根据UrlPathHelper从request获取请求的uri(去除contextPath和双斜杠之后的uri)。在根据uri从MappingRegistry获取对应的handlerMethod(可能为0个,1个，多个)  
+如果获取不到可能是restful的接口，则需要遍历所有的接口。根据AntPathMatcher进行挨个匹配，直到循环完所有的mapping  
+此时handlerMethod可能为空，为1个，甚至为多个，然后再从中选取最优的  
+### 注册的逻辑
+```java
+public void register(T mapping, Object handler, Method method) {
+    this.readWriteLock.writeLock().lock();
+    try {
+        HandlerMethod handlerMethod = createHandlerMethod(handler, method);// HandlerMethod包含了bean和对应的method
+        validateMethodMapping(handlerMethod, mapping);// 验证@RequestMapping注解不能出现重复的值
+        this.mappingLookup.put(mapping, handlerMethod);
+
+        List<String> directUrls = getDirectUrls(mapping);// 获取@RequestMapping的url（direct：不包含"*"、"?"、"{"、"}"符合的url）
+        for (String url : directUrls) {
+            this.urlLookup.add(url, mapping);
+        }
+...
+        // 处理跨域@CrossOrigin的注解
+        CorsConfiguration corsConfig = initCorsConfiguration(handler, method, mapping);
+        if (corsConfig != null) {
+            this.corsLookup.put(handlerMethod, corsConfig);// 保存跨域的注解，后期由CorsInterceptor来处理跨域的信息
+        }
+        ...
+    }
+    finally {
+        this.readWriteLock.writeLock().unlock();
+    }
+}
+```
+
+### 选取最优的逻辑
+```java
+// 部分源码
+protected HandlerMethod lookupHandlerMethod(String lookupPath, HttpServletRequest request) throws Exception {
+    List<Match> matches = new ArrayList<>();
+    // 根据uri直接获取
+    List<T> directPathMatches = this.mappingRegistry.getMappingsByUrl(lookupPath);
+    if (directPathMatches != null) {
+        addMatchingMappings(directPathMatches, matches, request);
+    }
+    // 为空可能为restful风格，需要遍历所有的接口 原文：No choice but to go through all mappings...
+    if (matches.isEmpty()) {
+        addMatchingMappings(this.mappingRegistry.getMappings().keySet(), matches, request);
+    }
+
+    if (!matches.isEmpty()) {
+        Match bestMatch = matches.get(0);
+        // 获取最优的接口
+        if (matches.size() > 1) {
+            Comparator<Match> comparator = new MatchComparator(getMappingComparator(request));// 选取最优逻辑的排序器
+            matches.sort(comparator);
+            bestMatch = matches.get(0);
+            // 如果是预检请求直接返回一个预检的handler代表已匹配，但是预检请求并不会真正的执行，注意：只有大于2个handler时才会返回，这是因为预检请求和真实请求可能header或参数不一样。无法精确匹配handler
+            if (CorsUtils.isPreFlightRequest(request)) {
+                return PREFLIGHT_AMBIGUOUS_MATCH;
+            }
+            if (comparator.compare(bestMatch, matches.get(1)) == 0) {
+                // 选择不了最优的接口直接抛异常
+                throw new IllegalStateException(...);
+            }
+        }
+        ...
+        return bestMatch.handlerMethod;
+    } else {
+        return null;
+    }
+}
+```
+
+## 多个HandlerMethod时选择最优的匹配
+
+```java
+public int compareTo(RequestMappingInfo other, HttpServletRequest request) {
+    int result;
+    // Automatic vs explicit HTTP HEAD mapping
+    if (HttpMethod.HEAD.matches(request.getMethod())) {
+        result = this.methodsCondition.compareTo(other.getMethodsCondition(), request);
+        if (result != 0) {
+            return result;
+        }
+    }
+    result = this.patternsCondition.compareTo(other.getPatternsCondition(), request);
+    if (result != 0) {
+        return result;
+    }
+    result = this.paramsCondition.compareTo(other.getParamsCondition(), request);
+    if (result != 0) {
+        return result;
+    }
+    result = this.headersCondition.compareTo(other.getHeadersCondition(), request);
+    if (result != 0) {
+        return result;
+    }
+    result = this.consumesCondition.compareTo(other.getConsumesCondition(), request);
+    if (result != 0) {
+        return result;
+    }
+    result = this.producesCondition.compareTo(other.getProducesCondition(), request);
+    if (result != 0) {
+        return result;
+    }
+    // Implicit (no method) vs explicit HTTP method mappings
+    result = this.methodsCondition.compareTo(other.getMethodsCondition(), request);
+    if (result != 0) {
+        return result;
+    }
+    result = this.customConditionHolder.compareTo(other.customConditionHolder, request);
+    if (result != 0) {
+        return result;
+    }
+    return 0;
 }
 ```
 
