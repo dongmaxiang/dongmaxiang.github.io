@@ -266,7 +266,7 @@ public class DispatcherServlet extends FrameworkServlet {
 ## @RequestMapping方法提供者-RequestMappingHandlerMapping
 
 RequestMappingHandlerMapping在初始化时会把所有带有@Controller注解或者@RequestMapping注解的bean解析    
-然后把@RequestMapping对应的url和对应的方法(bean和method)绑定到MappingRegistry(MultiValueMap类型)中：key为uri，value为HandlerMethod。  
+然后把@RequestMapping对应的url和对应的方法(bean和method)绑定到MappingRegistry(MultiValueMap类型)中：key为uri，value为多个HandlerMethod  
 dispatcherServlet在获取对应的Handler时，根据UrlPathHelper从request获取请求的uri(去除contextPath和双斜杠之后的uri)。在根据uri从MappingRegistry获取对应的handlerMethod(可能为0个,1个，多个)  
 如果获取不到可能是restful的接口，则需要遍历所有的接口。根据AntPathMatcher进行挨个匹配，直到循环完所有的mapping  
 此时handlerMethod可能为空，为1个，甚至为多个，然后再从中选取最优的  
@@ -274,6 +274,7 @@ dispatcherServlet在获取对应的Handler时，根据UrlPathHelper从request获
 ```java
 class MappingRegistry {
     ...
+    //mapping为@RequestMapping的信息
     public void register(T mapping, Object handler, Method method) {
         this.readWriteLock.writeLock().lock();
         try {
@@ -354,13 +355,13 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 1. 如果request请求是head方法，则优先匹配方法一致的  
    method = RequestMethod.HEAD
 1. 然后再次匹配pattern精度比较高的
-1. 匹配params  
+1. 匹配params精度比较高的  
    params = "abc=123"
-1. 匹配headers  
+1. 匹配headers精度比较高的  
    headers = "content-type=text/*"
-1. consumers
-1. produces
-1. method
+1. consumers精度比较高的
+1. produces精度比较高的
+1. method精度比较高的
    
 ```java
 public final class RequestMappingInfo implements RequestCondition<RequestMappingInfo> {
@@ -417,6 +418,3 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 4. 参数校验异常
 5. 逻辑处理异常
 6. ...等其他不常见的异常
-
-
-# RequestMappingHandlerAdapter
