@@ -7,6 +7,7 @@ categories: [java,spring]
 tags: [springMVC]
 ---
 
+spring的MVC是遵循着servlet规范的。
 # servlet规范
 当Http服务器接收请求后，Http服务器不直接调用业务类，而是把请求交给Servlet容器去处理，Servlet容器会将请求转发到具体的Servlet   
 Servlet是个接口，如果想要让业务类具备处理请求的能力则需要实现此并接口，并配置到web.xml当中即可。  
@@ -30,15 +31,15 @@ public interface Servlet {
 ```
 
 # springBoot的DispatcherServlet关联到servlet容器中
-我们知道springMVC的入口类dispatcherServlet，其实他也是servlet的实现类。那么他是如何和servlet容器关联上的呢？  
+我们知道springMVC的入口类dispatcherServlet，其实他也是servlet的实现类。那么他是如何和servlet容器关联上的呢，为什么所有的请求都有它管控呢？  
 
 ## 大体流程
-1. 在springBoot容器启动流程中的[refresh阶段]({{ "/springBoot容器启动流程" | relative_url }})，会执行ServletContext的onStartup逻辑进行bind
+1. 在springBoot容器启动流程中的[ContextRefresh阶段]({{ "/springBoot容器启动流程" | relative_url }})，context如果是ServletContext则会执行ServletContext的onStartup逻辑进行bind
 1. bind逻辑通过ServletContextInitializerBeans和beanFactory获取以下实现类  
 ServletContextInitializer、Filter、Servlet、ServletContextAttributeListener、ServletRequestListener、ServletRequestAttributeListener、HttpSessionAttributeListener、HttpSessionListener、ServletContextListener
 1. 不是ServletContextInitializer的话，全部包装成ServletContextInitializer
 1. 排序所有的ServletContextInitializer，进行迭代依次调用onStartup
-1. ServletContextInitializer各个的onStartup会绑定到servletContext中
+1. onStartup时会把对应的urlMapping和servlet、filter、listener绑定到servletContext中
 
 ## 代码流程
 ```java
@@ -189,17 +190,50 @@ public class ServletContextInitializerBeans extends AbstractCollection<ServletCo
     }
 }
 ```
+
+* dispatcherServlet的url映射绑定的代码  
+由DispatcherServletRegistrationBean注册dispatchServlet实例。  
+DispatcherServletRegistrationBean继承自DispatcherServletPath。  
+通过getServletUrlMapping方法的返回值绑定到servlet中  
+  
+```java
+public interface DispatcherServletPath {
+   ...
+   default String getServletUrlMapping() {
+      /* getPath() 为yml配置文件中的
+       server:
+         servlet:
+           context-path: ...
+       */
+      if (getPath().equals("") || getPath().equals("/")) {
+         return "/";
+      }
+      if (getPath().contains("*")) {
+         return getPath();
+      }
+      if (getPath().endsWith("/")) {
+         return getPath() + "*";
+      }
+      return getPath() + "/*";
+   }
+
+}
+```
+
+
 至此servletContext已经配置完毕。按照servlet容器的规范，我们的dispatcherServlet以及项目当中配置的filter，FilterRegistrationBean等配置都已经绑定好并生效。
 
 # dispatcher正常执行流程
 
 ## 大体流程
-1. 通过request从HandlerMapping获取HandlerExecutionChain（包含了handler和拦截器）  
-   @RequestMapping：<small>handler默认由RequestMappingHandlerMapping提供=org.springframework.web.method.HandlerMethod</small>  
-   静态资源：<small>handler默认由SimpleUrlHandlerMapping提供=org.springframework.web.servlet.resource.ResourceHttpRequestHandler</small>
+1. 通过request从HandlerMapping获取HandlerExecutionChain（包含了handler和拦截器）
+   handlerMapping：定位资源，不执行、不获取，只用来定位  
+   * @RequestMapping：<small>handler默认由RequestMappingHandlerMapping提供=org.springframework.web.method.HandlerMethod</small>  
+   * 静态资源：<small>handler默认由SimpleUrlHandlerMapping提供=org.springframework.web.servlet.resource.ResourceHttpRequestHandler</small>
 1. 通过handler获取handlerAdaptor(真正执行handler的处理器)  
-   @RequestMapping：<small>默认由org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter提供执行服务</small>    
-   静态资源：<small>默认由org.springframework.web.servlet.mvc.HttpRequestHandlerAdapter提供执行服务</small>
+   handlerAdaptor: 根据定位的资源，进行获取(执行)  
+   * @RequestMapping：<small>默认由org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter提供执行服务</small>    
+   * 静态资源：<small>默认由org.springframework.web.servlet.mvc.HttpRequestHandlerAdapter提供执行服务</small>
 1. 如果资源可以复用（未修改），直接返回304，由handlerAdaptor提供服务
 1. 执行前置拦截器interceptor，返回false不允许往下执行
 1. 由handlerAdaptor执行handler的逻辑并返回modelAndView  
@@ -428,16 +462,17 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 但在RequestMappingHandlerAdapter内部，把执行权交给了ServletInvocableHandlerMethod，该类继承自HandlerMethod    
 > ServletInvocableHandlerMethod调用之前会组装(bind)参数    
 > bind参数需要获取方法参数上的参数名,默认提供者：DefaultParameterNameDiscoverer    
-> 以及根据参数名从request获取对应的value，默认提供者：RequestMappingHandlerAdapter#getDefaultArgumentResolvers。**ps:通过实现WebMvcConfigurer，可自定义参数解析器**    
+> 以及根据参数名从request获取对应的value，默认提供者：RequestMappingHandlerAdapter#getDefaultArgumentResolvers。**ps:通过实现WebMvcConfigurer#addArgumentResolvers，可自定义参数解析器**  
 > 组装好参数之后ServletInvocableHandlerMethod通过反射调用真正的@RequestMapping对应的方法  
-> 如果调用异常会org.springframework.web.servlet.HandlerExceptionResolver处理异常。默认提供者：  
-> ServletInvocableHandlerMethod调用方法后返回的结果会通过HandlerMethodReturnValueHandler的实现类  
+> 调用出现异常会把异常抛出去，由[dispatcher处理](#dispatcher错误执行流程)  
+> 调用方法后返回的结果会通过HandlerMethodReturnValueHandler处理响应，默认提供者：RequestMappingHandlerAdapter#getDefaultReturnValueHandlers。**ps:通过实现WebMvcConfigurer#addReturnValueHandlers可自定义返回值处理**  
 
-# dispatcher错误执行流程
+# <span id='dispatcher错误执行流程'>dispatcher错误执行流程</span>  
+通过HandlerExceptionResolver处理异常。默认异常处理提供者：ExceptionHandlerExceptionResolver
 常见的错误有
 1. 404
 2. get方式访问只允许post的接口。
 3. 参数转换异常
 4. 参数校验异常
-5. 逻辑处理异常
+5. **逻辑处理异常**
 6. ...等其他不常见的异常
