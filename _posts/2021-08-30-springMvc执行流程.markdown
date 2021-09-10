@@ -31,7 +31,7 @@ public interface Servlet {
 ```
 
 # springBoot的DispatcherServlet关联到servlet容器中
-我们知道springMVC的入口类dispatcherServlet，其实他也是servlet的实现类。那么他是如何和servlet容器关联上的呢，为什么所有的请求都有它管控呢？  
+我们知道springMVC的入口类dispatcherServlet，其实他也是servlet的实现类。那么他是如何和servlet容器关联上的呢，为什么所有的请求都由它管控呢？  
 
 ## 大体流程
 1. 在springBoot容器启动流程中的[ContextRefresh阶段]({{ "/springBoot容器启动流程" | relative_url }})，context如果是ServletContext则会执行ServletContext的onStartup逻辑进行bind
