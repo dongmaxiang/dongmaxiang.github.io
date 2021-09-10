@@ -31,14 +31,14 @@ public interface Servlet {
 
 # springBoot的DispatcherServlet关联到servlet容器中
 我们知道springMVC的入口类dispatcherServlet，其实他也是servlet的实现类。那么他是如何和servlet容器关联上的呢？  
-在springBoot容器启动流程中的[refresh阶段]({{ "/springBoot容器启动流程" | relative_url }})，会执行ServletContext实例的onStartup逻辑。
 
 ## 大体流程
-1. 通过ServletContextInitializerBeans和beanFactory获取以下实现类  
+1. 在springBoot容器启动流程中的[refresh阶段]({{ "/springBoot容器启动流程" | relative_url }})，会执行ServletContext的onStartup逻辑进行bind
+1. bind逻辑通过ServletContextInitializerBeans和beanFactory获取以下实现类  
 ServletContextInitializer、Filter、Servlet、ServletContextAttributeListener、ServletRequestListener、ServletRequestAttributeListener、HttpSessionAttributeListener、HttpSessionListener、ServletContextListener
 1. 不是ServletContextInitializer的话，全部包装成ServletContextInitializer
 1. 排序所有的ServletContextInitializer，进行迭代依次调用onStartup
-1. onStartup会绑定到servletContext中
+1. ServletContextInitializer各个的onStartup会绑定到servletContext中
 
 ## 代码流程
 ```java
@@ -192,15 +192,24 @@ public class ServletContextInitializerBeans extends AbstractCollection<ServletCo
 至此servletContext已经配置完毕。按照servlet容器的规范，我们的dispatcherServlet以及项目当中配置的filter，FilterRegistrationBean等配置都已经绑定好并生效。
 
 # dispatcher正常执行流程
-大体流程分为
-1. 通过request从HandlerMapping获取HandlerExecutionChain（包含了handler和拦截器）
-1. 通过handler获取handlerAdaptor(真正执行handler的处理器)
+
+## 大体流程
+1. 通过request从HandlerMapping获取HandlerExecutionChain（包含了handler和拦截器）  
+   @RequestMapping：<small>handler默认由RequestMappingHandlerMapping提供=org.springframework.web.method.HandlerMethod</small>  
+   静态资源：<small>handler默认由SimpleUrlHandlerMapping提供=org.springframework.web.servlet.resource.ResourceHttpRequestHandler</small>
+1. 通过handler获取handlerAdaptor(真正执行handler的处理器)  
+   @RequestMapping：<small>默认由org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter提供执行服务</small>    
+   静态资源：<small>默认由org.springframework.web.servlet.mvc.HttpRequestHandlerAdapter提供执行服务</small>
 1. 如果资源可以复用（未修改），直接返回304，由handlerAdaptor提供服务
 1. 执行前置拦截器interceptor，返回false不允许往下执行
-1. 由handlerAdaptor执行handler的逻辑并返回modelAndView
+1. 由handlerAdaptor执行handler的逻辑并返回modelAndView  
 1. 执行后置拦截器interceptor
 1. 根据modelAndView或者执行期间捕获的exception处理最终的响应
 
+> spring的MVC常用的配置，默认由org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration提供  
+> 如静态资源、拦截器、跨域请求、@RequestMapping对应的方法等等。。。
+
+## 代码流程
 ```java
 public class DispatcherServlet extends FrameworkServlet {
     
@@ -214,7 +223,7 @@ public class DispatcherServlet extends FrameworkServlet {
       Exception dispatchException = null; // 处理遇到的异常
       try {
          ...
-         // controller里面的方法：默认由RequestMappingHandlerMapping提供handler=org.springframework.web.method.HandlerMethod
+         // @RequestMapping：默认由RequestMappingHandlerMapping提供handler=org.springframework.web.method.HandlerMethod
          mappedHandler = getHandler(processedRequest);
          if (mappedHandler == null) {
             // 404处理 
@@ -223,7 +232,7 @@ public class DispatcherServlet extends FrameworkServlet {
          }
 
          // 获取执行handler的适配器。
-         // controller里面的方法，默认由org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter提供执行服务
+         // @RequestMapping，默认由org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter提供执行服务
          HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
 
          // 304。资源复用。
@@ -241,11 +250,8 @@ public class DispatcherServlet extends FrameworkServlet {
          }
 
          /*
-          进行method调用
-          RequestMappingHandlerAdapter执行HandlerMethod时，会通过ServletInvocableHandlerMethod静态代理HandlerMethod
-          ServletInvocableHandlerMethod调用之前会组装(bind)参数
-          bind参数需要获取参数名称,默认提供者：DefaultParameterNameDiscoverer
-          以及根据参数名称获取对应的值，默认提供者：
+          @RequestMapping方法的执行逻辑：     
+          RequestMappingHandlerAdapter执行HandlerMethod时，会通过ServletInvocableHandlerMethod执行HandlerMethod中的方法
           */
          mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
          ...
@@ -269,8 +275,9 @@ RequestMappingHandlerMapping在初始化时会把所有带有@Controller注解�
 然后把@RequestMapping对应的url和对应的方法(bean和method)绑定到MappingRegistry(MultiValueMap类型)中：key为uri，value为多个HandlerMethod  
 dispatcherServlet在获取对应的Handler时，根据UrlPathHelper从request获取请求的uri(去除contextPath和双斜杠之后的uri)。在根据uri从MappingRegistry获取对应的handlerMethod(可能为0个,1个，多个)  
 如果获取不到可能是restful的接口，则需要遍历所有的接口。根据AntPathMatcher进行挨个匹配，直到循环完所有的mapping  
-此时handlerMethod可能为空，为1个，甚至为多个，然后再从中选取最优的  
-### 注册的逻辑
+此时handlerMethod可能为空，为1个，甚至为多个，然后再从中选取最优的
+
+* @RequestMapping注册的逻辑  
 ```java
 class MappingRegistry {
     ...
@@ -301,7 +308,7 @@ class MappingRegistry {
 }
 ```
 
-### 选取最优的逻辑
+* 根据请求获取对应的@RequestMapping  
 ```java
 // 部分源码
 public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMapping implements InitializingBean {
@@ -311,6 +318,7 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
         // 根据uri直接获取
         List<T> directPathMatches = this.mappingRegistry.getMappingsByUrl(lookupPath);
         if (directPathMatches != null) {
+            // uri匹配的mapping，需要判断其他的配置是否匹配，比如@RequestMapping(params = "abc=123", method = RequestMethod.POST)
             addMatchingMappings(directPathMatches, matches, request);
         }
         // 为空可能为restful风格，需要遍历所有的接口 原文：No choice but to go through all mappings...
@@ -346,11 +354,15 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 
 ## 多个@RequestMapping时选择最优的匹配
 如以下几个配置
-* @RequestMapping(value = "*", headers = "content-type=text/*", method = RequestMethod.POST)  
-* @RequestMapping(value = "/abc/*", method = RequestMethod.GET)
-* @RequestMapping(value = "/abc/{id}", params = "abc=123")
+1. ```@RequestMapping(value = "*", headers = "content-type=text/*", method = RequestMethod.POST)```  
+1. ```@RequestMapping(value = "/abc/*", method = RequestMethod.GET)```
+1. ```@RequestMapping(value = "/abc/{id}", params = "abc=123")```
+1. ```@RequestMapping(value = "/abc/def")```
 
-如果请求地址为 /abc/123，则都会匹配这三个RequestMapping，那么是如何选取最优的呢？
+如果请求地址为 /abc/def,那么会直接匹配第四个注解。
+> 如果url无占位符号、通用符号，那么会根据url进行直接匹配
+
+如果请求地址为 /abc/123?abc=123，则都会匹配前三个的RequestMapping，那么是如何选取最优的呢？
 
 1. 如果request请求是head方法，则优先匹配方法一致的  
    method = RequestMethod.HEAD
@@ -363,6 +375,7 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 1. produces精度比较高的
 1. method精度比较高的
    
+源码：  
 ```java
 public final class RequestMappingInfo implements RequestCondition<RequestMappingInfo> {
     ...
@@ -409,6 +422,16 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
     ...
 }
 ```
+
+## RequestMappingHandlerAdapter
+@RequestMapping对应的方法最终会封装成一个HandlerMethod，由RequestMappingHandlerAdapter执行HandlerMethod  
+但在RequestMappingHandlerAdapter内部，把执行权交给了ServletInvocableHandlerMethod，该类继承自HandlerMethod    
+> ServletInvocableHandlerMethod调用之前会组装(bind)参数    
+> bind参数需要获取方法参数上的参数名,默认提供者：DefaultParameterNameDiscoverer    
+> 以及根据参数名从request获取对应的value，默认提供者：RequestMappingHandlerAdapter#getDefaultArgumentResolvers。**ps:通过实现WebMvcConfigurer，可自定义参数解析器**    
+> 组装好参数之后ServletInvocableHandlerMethod通过反射调用真正的@RequestMapping对应的方法  
+> 如果调用异常会org.springframework.web.servlet.HandlerExceptionResolver处理异常。默认提供者：  
+> ServletInvocableHandlerMethod调用方法后返回的结果会通过HandlerMethodReturnValueHandler的实现类  
 
 # dispatcher错误执行流程
 常见的错误有
