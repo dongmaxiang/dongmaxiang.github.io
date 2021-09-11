@@ -459,20 +459,32 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 
 ## RequestMappingHandlerAdapter
 @RequestMapping对应的方法最终会封装成一个HandlerMethod，由RequestMappingHandlerAdapter执行HandlerMethod  
-但在RequestMappingHandlerAdapter内部，把执行权交给了ServletInvocableHandlerMethod，该类继承自HandlerMethod    
-> ServletInvocableHandlerMethod调用之前会组装(bind)参数    
-> bind参数需要获取方法参数上的参数名,默认提供者：DefaultParameterNameDiscoverer    
-> 以及根据参数名从request获取对应的value，默认提供者：RequestMappingHandlerAdapter#getDefaultArgumentResolvers。**ps:通过实现WebMvcConfigurer#addArgumentResolvers，可自定义参数解析器**  
-> 组装好参数之后ServletInvocableHandlerMethod通过反射调用真正的@RequestMapping对应的方法  
-> 调用出现异常会把异常抛出去，由[dispatcher处理](#dispatcher错误执行流程)  
-> 调用方法后返回的结果会通过HandlerMethodReturnValueHandler处理响应，默认提供者：RequestMappingHandlerAdapter#getDefaultReturnValueHandlers。**ps:通过实现WebMvcConfigurer#addReturnValueHandlers可自定义返回值处理**  
+但在RequestMappingHandlerAdapter内部，把执行权交给了ServletInvocableHandlerMethod，该类继承自HandlerMethod
+
+### <span id="ServletInvocableHandlerMethod">ServletInvocableHandlerMethod</span>
+1. ServletInvocableHandlerMethod调用之前会组装(bind)参数    
+1. bind参数需要获取方法参数上的参数名,默认提供者：DefaultParameterNameDiscoverer    
+1. 以及根据参数名从request获取对应的value，默认提供者：RequestMappingHandlerAdapter#getDefaultArgumentResolvers。**ps:通过实现WebMvcConfigurer#addArgumentResolvers，可自定义参数解析器**  
+1. 组装好参数之后ServletInvocableHandlerMethod通过反射调用真正的@RequestMapping对应的方法  
+1. 调用出现异常会把异常抛出去，由[dispatcher处理](#dispatcher错误执行流程)  
+1. 调用方法后返回的结果会通过HandlerMethodReturnValueHandler处理响应，默认提供者：RequestMappingHandlerAdapter#getDefaultReturnValueHandlers。**ps:通过实现WebMvcConfigurer#addReturnValueHandlers可自定义返回值处理**  
+1. returnValue处理完之后动态的返回modelAndView**ps:如果是@ReuqestBody则返回null，因为返回值已经在内部处理了，其他的如重定向、重转发、返回页面渲染等通过modelAndView完成**
 
 # <span id='dispatcher错误执行流程'>dispatcher错误执行流程</span>  
-通过HandlerExceptionResolver处理异常。默认异常处理提供者：ExceptionHandlerExceptionResolver
+通过HandlerExceptionResolver处理异常。默认异常处理提供者：ExceptionHandlerExceptionResolver#getExceptionHandlerMethod
 常见的错误有
 1. 404
-2. get方式访问只允许post的接口。
+2. @RequestMapping请求方式不对。
 3. 参数转换异常
-4. 参数校验异常
+4. 参数校验失败
 5. **逻辑处理异常**
-6. ...等其他不常见的异常
+6. ...等其他的不常见异常
+
+## 大体流程
+1. dispatcherServlet遇到异常会通过内部的方法processHandlerException遍历HandlerExceptionResolver的实现类处理异常
+1. HandlerExceptionResolver的默认提供者ExceptionHandlerExceptionResolve
+1. ExceptionHandlerExceptionResolve通过异常类型和@ExceptionHandler注解获取对应的方法
+1. 获取然后包装成ServletInvocableHandlerMethod，并把执行权交给它
+1. 获取然后包装成ServletInvocableHandlerMethod，并把执行权交给它
+
+## 代码流程
