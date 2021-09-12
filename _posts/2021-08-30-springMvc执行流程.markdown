@@ -492,6 +492,7 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 ## 代码流程
 
 1. dispatcherServlet遇到异常会通过内部的方法processHandlerException遍历HandlerExceptionResolver的实现类处理异常  
+   @ExceptionHandler的注解，由ExceptionHandlerExceptionResolver处理  
 ```java
 public class DispatcherServlet extends FrameworkServlet {
     ...
@@ -568,7 +569,7 @@ public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExce
 		 ...
 	}
 	
-   // 找出能处理对应异常类型的方法
+   // 找出能处理对应异常的方法
    protected ServletInvocableHandlerMethod getExceptionHandlerMethod(HandlerMethod handlerMethod, Exception exception) {
       Class<?> handlerType = null;
       // 如果handler不为空代表在执行handler期间遇到的异常 ，优先从当前handler找出能处理对应异常的@ExceptionHandler注解方法
@@ -601,3 +602,8 @@ public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExce
 
 }
 ```
+
+## 总结
+ExceptionHandlerExceptionResolver是@ExceptionHandler注解的实现。通过异常的类型优先从handler对应的bean里面寻找@ExceptionHandler  
+如果没有则从全局@ControllerAdvice的bean里面寻找对应的@ExceptionHandler方法  
+获取然后包装成[ServletInvocableHandlerMethod](#ServletInvocableHandlerMethod)，并把执行权交给它
