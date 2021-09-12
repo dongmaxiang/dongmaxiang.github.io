@@ -481,11 +481,11 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 ## 大体流程
 1. dispatcherServlet遇到异常会通过内部的方法processHandlerException遍历HandlerExceptionResolver的实现类处理异常
 1. HandlerExceptionResolver的默认提供者```org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupport#addDefaultHandlerExceptionResolvers```  
-   @ExceptionHandler的注解，由ExceptionHandlerExceptionResolver处理
-1. ExceptionHandlerExceptionResolve处理异常时：通过异常的类型找出能处理的方法
-   ```ExceptionHandlerExceptionResolver#getExceptionHandlerMethod```找出能处理对应异常类型的方法
+   @ExceptionHandler的注解，由ExceptionHandlerExceptionResolver处理  
+1. ExceptionHandlerExceptionResolve处理异常时：通过异常的类型找出能处理的方法  
+   ```ExceptionHandlerExceptionResolver#getExceptionHandlerMethod```找出能处理对应异常类型的方法  
    如果handler不为空代表在执行handler期间遇到的异常 ，优先从当前handler找出能处理对应异常的@ExceptionHandler注解方法  
-   如果handler为空或handler找不到能处理异常的方法，则从全局@ControllerAdvice注解的类中找出能处理对应异常的@ExceptionHandler注解方法
+   如果handler为空或handler找不到能处理异常的方法，则从全局@ControllerAdvice注解的类中找出能处理对应异常的@ExceptionHandler注解方法  
 1. 获取然后包装成[ServletInvocableHandlerMethod](#ServletInvocableHandlerMethod)，并把执行权交给它
 1. 如果ServletInvocableHandlerMethod在执行异常处理期间遇到了异常则```return null```,交由下一个HandlerExceptionResolver的实现类接着处理原先的异常 
 
@@ -494,7 +494,8 @@ public final class RequestMappingInfo implements RequestCondition<RequestMapping
 1. dispatcherServlet遇到异常会通过内部的方法processHandlerException遍历HandlerExceptionResolver的实现类处理异常  
 ```java
 public class DispatcherServlet extends FrameworkServlet {
-	protected ModelAndView processHandlerException(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+    ...
+    protected ModelAndView processHandlerException(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
         ...
 		ModelAndView exMv = null;
 		if (this.handlerExceptionResolvers != null) {
@@ -521,54 +522,53 @@ public class DispatcherServlet extends FrameworkServlet {
 			return exMv;
 		}
 		...
-	}
+    }
 }
 ```
 
 1. ExceptionHandlerExceptionResolve处理异常时：通过异常的类型找出能处理的方法  
-   获取然后包装成[ServletInvocableHandlerMethod](#ServletInvocableHandlerMethod)，并把执行权交给它  
+   获取然后包装成[ServletInvocableHandlerMethod](#ServletInvocableHandlerMethod)，并把执行权交给它
+
 ```java
 public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExceptionResolver implements ApplicationContextAware, InitializingBean {
 	protected ModelAndView doResolveHandlerMethodException(HttpServletRequest request, HttpServletResponse response, HandlerMethod handlerMethod, Exception exception) {
-        // 通过异常的类型找出能处理的方法
-		ServletInvocableHandlerMethod exceptionHandlerMethod = getExceptionHandlerMethod(handlerMethod, exception);
-		if (exceptionHandlerMethod == null) {
-			return null;
-		}
-
-		if (this.argumentResolvers != null) {
-			exceptionHandlerMethod.setHandlerMethodArgumentResolvers(this.argumentResolvers);
-		}
-		if (this.returnValueHandlers != null) {
-			exceptionHandlerMethod.setHandlerMethodReturnValueHandlers(this.returnValueHandlers);
-		}
-
-		ServletWebRequest webRequest = new ServletWebRequest(request, response);
-		ModelAndViewContainer mavContainer = new ModelAndViewContainer();
-
-		try {
-			Throwable cause = exception.getCause();
-			if (cause != null) {
-				exceptionHandlerMethod.invokeAndHandle(webRequest, mavContainer, exception, cause, handlerMethod);
-			}
-			else {
-				exceptionHandlerMethod.invokeAndHandle(webRequest, mavContainer, exception, handlerMethod);
-			}
-		}
-		catch (Throwable invocationEx) {
-			return null;
-		}
-
-		// 如果已经对response做过处理
-		if (mavContainer.isRequestHandled()) {
-			return new ModelAndView();
-		}
-		...
+         // 通过异常的类型找出能处理的方法
+         ServletInvocableHandlerMethod exceptionHandlerMethod = getExceptionHandlerMethod(handlerMethod, exception);
+         if (exceptionHandlerMethod == null) {
+            return null;
+         }
+         
+         if (this.argumentResolvers != null) {
+            exceptionHandlerMethod.setHandlerMethodArgumentResolvers(this.argumentResolvers);
+         }
+         if (this.returnValueHandlers != null) {
+            exceptionHandlerMethod.setHandlerMethodReturnValueHandlers(this.returnValueHandlers);
+         }
+         
+         ServletWebRequest webRequest = new ServletWebRequest(request, response);
+         ModelAndViewContainer mavContainer = new ModelAndViewContainer();
+         
+         try {
+            Throwable cause = exception.getCause();
+            if (cause != null) {
+                exceptionHandlerMethod.invokeAndHandle(webRequest, mavContainer, exception, cause, handlerMethod);
+            }
+            else {
+                exceptionHandlerMethod.invokeAndHandle(webRequest, mavContainer, exception, handlerMethod);
+            }
+         }
+         catch (Throwable invocationEx) {
+            return null;
+         }
+         
+         // 如果已经对response做过处理
+         if (mavContainer.isRequestHandled()) {
+            return new ModelAndView();
+         }
+		 ...
 	}
-
-   /*
-    ```ExceptionHandlerExceptionResolver#getExceptionHandlerMethod```找出能处理对应异常类型的方法
-   */
+	
+   // 找出能处理对应异常类型的方法
    protected ServletInvocableHandlerMethod getExceptionHandlerMethod(HandlerMethod handlerMethod, Exception exception) {
       Class<?> handlerType = null;
       // 如果handler不为空代表在执行handler期间遇到的异常 ，优先从当前handler找出能处理对应异常的@ExceptionHandler注解方法
@@ -584,6 +584,7 @@ public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExce
       }
 
       // 如果handler为空或handler找不到能处理异常的方法，则从全局@ControllerAdvice注解的类中找出能处理对应异常的@ExceptionHandler注解方法
+      // 具体获取@ControllerAdvice对应的方法可参考ExceptionHandlerExceptionResolver#initExceptionHandlerAdviceCache
       for (Map.Entry<ControllerAdviceBean, ExceptionHandlerMethodResolver> entry : this.exceptionHandlerAdviceCache.entrySet()) {
          ControllerAdviceBean advice = entry.getKey();
          if (advice.isApplicableToBeanType(handlerType)) {
