@@ -70,7 +70,8 @@ setTypeConverter|setConversionService等其他方法
 
 ## 大体流程
 
-1. 获取beanFactory(context初始化时就自动创建好了。默认实现```org.springframework.beans.factory.support.DefaultListableBeanFactory```)  
+1. 获取beanFactory  
+   context初始化时就自动创建好了。默认实现```org.springframework.beans.factory.support.DefaultListableBeanFactory```  
    ```this.beanFactory = new DefaultListableBeanFactory()```
    
 1. 准备beanFactory  
