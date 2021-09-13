@@ -605,5 +605,5 @@ public class ExceptionHandlerExceptionResolver extends AbstractHandlerMethodExce
 
 ## 总结
 ExceptionHandlerExceptionResolver是@ExceptionHandler注解的实现。通过异常的类型优先从handler对应的bean里面寻找@ExceptionHandler  
-如果没有则从全局@ControllerAdvice的bean里面寻找对应的@ExceptionHandler方法  
+如果找不到处理异常的方法或者handler为空，则从全局@ControllerAdvice的bean里面寻找对应的方法  
 获取然后包装成[ServletInvocableHandlerMethod](#ServletInvocableHandlerMethod)，并把执行权交给它
