@@ -8,19 +8,20 @@ tags: [spring,源码]
 ---
 
 # 大体流程
-不同的bean实现的接口不同、它的作用也不不同、那么他的加载顺序也不同
-具体可参考[beanFactory对不同类型的bean加载的顺序](#springBeanFactory流程解析)  
+不同的bean实现的接口不同、它的作用也不不同、那么他的加载顺序也不同  
+具体可参考[beanFactory对不同类型的bean加载的顺序]({{ "/springBeanFactory流程解析" | relative_url }})  
 
 如果bean的类型相同、实现的接口也相同则根据
 1. 实现```org.springframework.core.PriorityOrdered```接口
 1. 实现```org.springframework.core.Ordered```接口
 1. 注解```@Order```
-1. 注解```@Priority```
+1. 注解```@Priority```  
+
 以上优先级从高到低  
 接口优先级比注解的高  
-相同的接口PriorityOrdered优先级更高  
-相同的注解@Order优先级更高  
-
+如果都是接口PriorityOrdered优先级更高  
+如果都是注解@Order优先级更高  
+**数值越小的优先级就越高**
 # 代码流程
 
 具体可参考```org.springframework.core.OrderComparator```

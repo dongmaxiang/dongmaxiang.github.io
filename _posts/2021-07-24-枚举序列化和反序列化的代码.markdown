@@ -118,7 +118,7 @@ public class EnumDeserializerImpls {
             if (valueRawClass == null) {
                 return source;
             }
-            Class<Enum<?>> enumClass = (Class<Enum<?>>) targetResolvableType.getRawClass();
+            Class<Enum<?>> enumClass = (Class<Enum<?>>) targetResolvableType.resolve();
 
             DeserializableEnum deserializableEnum = DeserializableEnum.getDeserializableEnum(enumClass).orElse(null);
             if (deserializableEnum == null) {
@@ -425,7 +425,7 @@ public class EnumDeserializerImpls {
 
         @Override
         public Object convert(Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
-            Class<?> targetClass = targetType.getResolvableType().getRawClass();
+            Class<?> targetClass = targetType.getResolvableType().resolve();
 
             return DeserializableEnum.getDeserializableEnumAndIdentityClass(targetClass)
                     .map((Function<Map.Entry<DeserializableEnum, Class<?>>, Object>) entry -> {
