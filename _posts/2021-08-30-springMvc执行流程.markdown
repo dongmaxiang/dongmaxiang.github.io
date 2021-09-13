@@ -4,7 +4,7 @@ title: springMvc执行流程
 permalink: /springMvc执行流程
 date: 2021-08-30 15:18:37.000000000 +08:00
 categories: [java,spring]
-tags: [springMVC]
+tags: [spring,源码]
 ---
 
 spring的MVC是遵循着servlet规范的。
