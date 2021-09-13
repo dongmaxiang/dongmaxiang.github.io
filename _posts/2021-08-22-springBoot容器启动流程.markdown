@@ -92,33 +92,41 @@ public class EventPublishingRunListener implements SpringApplicationRunListener 
 # 启动流程
 
 1. starting -》ApplicationStartingEvent  
-正在进行时、代表容器刚开始运行了---发出程序开始事件
+正在进行时、代表容器刚开始运行了---发出程序开始事件  
+springDevTools就是用到了此事件，把类加载器给换了一下，起到了热部署的作用，后期咱们会有详细的分析
 
 2. environmentPrepared -》ApplicationEnvironmentPreparedEvent  
-配置环境变量(远程)加载配置文件资源等---环境配置已就绪
-> 环境加载配置之后，马上就要实例化ApplicationContext了，不同的WebApplicationType，applicationContext也不同
-> 实例化完会调用ApplicationContextInitializer的initialize，事情通知容器已经实例化
+[配置环境变量加载配置文件资源等]({{ "/分析spring的Environment主要流程加载" | relative_url }})---发出环境配置已就绪事件  
+nacos和springCloud远程加载配置文件就是用到了此事件，后期咱们会有详细的分析  
+> 事件发出之后，马上就要实例化ApplicationContext了，不同的WebApplicationType，context不同   
+> 不管什么样的context，都会持有beanFactory,并且都会向beanFactory注册一个  
+> 实例化完后会发布事情通知容器已经实例化，调用ApplicationContextInitializer的initialize
 
 3. contextPrepared -》ApplicationContextInitializedEvent    
-容器准备---应用程序初始化完毕事件
+容器准备---发出应用程序上下文初始化事件  
+contextPrepared之后springBoot会把main方法所在的类注册到beanFactory中
 
 4. contextLoaded -》ApplicationPreparedEvent  
-容器已加载完毕---应用程序已准备就绪
-> contextLoaded之后 会调用 context.refresh，会实例化所有的bean
+容器已加载完毕---发出应用程序已准备就绪事件
+> contextLoaded之后 会调用 context.refresh，会实例化所有的bean  
+> refresh阶段比较复杂，基本上都是操作beanFactory完成bean的扫描、组装、初始化等逻辑  
+> beanFactory可参考[springBeanFactory流程解析]({{ "/springBeanFactory流程解析" | relative_url }})
 
 5. started -》ApplicationStartedEvent  
-过去式，代表容器开始运行已完成---应用程序已启动
+发出应用程序已启动事件
 
 6. running -》ApplicationReadyEvent  
-运行中---程序已做完
+运行中---发出程序已做完事件
 
 --failed -》ApplicationFailedEvent  
-容器或应用程序启动失败时的事件处理器，spring默认就是打印日志。  
+启动失败时的事件处理器，spring默认就是打印日志。  
 我们可以实现此事件的监听，项目启动失败之后直接报警等
 
 
 # 总结
 ApplicationContext这个是spring的容器（非常重要），启动的流程基本上都是围绕着他展开。  
-从各个事件的通知事件我们不难看出。从最开始的starting、environmentPrepared都是为applicationContext做准备。根据不同的WebType实例化不同的applicationContext，之后context会持久environment。  
-然后再以context为中心进行initialize事件的触发、然后contextPrepared、contextLoaded、context.refresh。
+从各个事件的通知事件我们不难看出。从最开始的starting、environmentPrepared都是为applicationContext做准备。根据不同的WebType实例化不同的applicationContext，之后context会持有environment  
+environment包含了所有的配置文件  
+然后再以context为中心进行initialize事件的触发、然后contextPrepared、contextLoaded、context.refresh  
+refresh工作比较复杂也是beanFactory的核心，具体可参考[springBeanFactory流程解析]({{ "/springBeanFactory流程解析" | relative_url }})
 最后在做结尾的工作started和running
