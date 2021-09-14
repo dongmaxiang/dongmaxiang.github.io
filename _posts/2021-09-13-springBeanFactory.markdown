@@ -139,7 +139,10 @@ setTypeConverter|setConversionService等其他方法
    例如：如果是servletBeanApplicationContext会对beanFactory增加额外的[Scope](#8-configurablelistablebeanfactory和configurablebeanfactory)，比如RequestScope、SessionScope等
    
 ## 4. 调用BeanFactoryPostProcessors
-
+BeanFactoryPostProcessor：顾名思义，针对beanFactory初始化后的后置处理  
+可能针对beanFactory注册一些其他的bean  
+可能针对beanFactory移除一些bean  
+BeanFactoryPostProcessor最重要的实现[ConfigurationClassPostProcessor，扫描所有的bean]{{ "/解析spring是如何向beanFactory注册bean的" | relative_url }})  
 
 # beanFactory加载bean的流程(顺序)
 beanFactory用来创建bean的，既然是创建、那么肯定有创建的顺序  
