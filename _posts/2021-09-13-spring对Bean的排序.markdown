@@ -9,7 +9,7 @@ tags: [spring,源码]
 
 # 大体流程
 不同的bean实现的接口不同、它的作用也不不同、那么他的加载顺序也不同  
-具体可参考[beanFactory对不同类型的bean加载的顺序]({{ "/springBeanFactory流程解析" | relative_url }})  
+具体可参考[beanFactory对不同类型的bean加载的顺序]({{ "/springBeanFactory流程解析#4-调用beanfactorypostprocessors" | relative_url }})  
 
 如果bean的类型相同、实现的接口也相同则根据
 1. 实现```org.springframework.core.PriorityOrdered```接口
@@ -34,3 +34,9 @@ tags: [spring,源码]
 > 获取注解
 
 spring 中对bean的排序用的是```org.springframework.core.annotation.AnnotationAwareOrderComparator#INSTANCE```
+## spring初始化context时会把排序的类注册到beanFactory中
+```java
+if (!(beanFactory.getDependencyComparator() instanceof AnnotationAwareOrderComparator)) {
+    beanFactory.setDependencyComparator(AnnotationAwareOrderComparator.INSTANCE);
+}
+```
