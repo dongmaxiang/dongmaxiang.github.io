@@ -63,7 +63,7 @@ public class EventPublishingRunListener implements SpringApplicationRunListener 
         }
         this.initialMulticaster.multicastEvent(new ApplicationPreparedEvent(this.application, this.args, context));
     }
-    // contextLoaded之后 会调用 [context.refresh]({{ "/springBeanFactory流程解析" | relative_url }})，会实例化所有的bean，包括以注解形式配置的listener
+    // contextLoaded之后 会调用 [context.refresh]({{ "/springBeanFactory流程解析" | relative_url }})，会实例化所有的bean(单例的、notLazy的)，包括以注解形式配置的listener
 
     // 5 启动完成
     @Override
@@ -110,7 +110,7 @@ contextPrepared之后springBoot会把main方法所在的类注册到beanFactory�
 
 4. contextLoaded -》ApplicationPreparedEvent  
 容器已加载完毕---发出应用程序已准备就绪事件
-> contextLoaded之后 会调用 context.refresh，会实例化所有的bean  
+> contextLoaded之后 会调用 context.refresh，会实例化所有的bean(单例的、notLazy的)  
 > refresh阶段比较复杂，基本上都是操作beanFactory完成bean的扫描、组装、初始化等逻辑  
 > beanFactory可参考[springBeanFactory流程解析]({{ "/springBeanFactory流程解析" | relative_url }})
 
