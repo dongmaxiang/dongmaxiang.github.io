@@ -28,15 +28,13 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader i
 
                 initMessageSource();
 
-                initApplicationEventMulticaster();// 扫描以注解形式存在的listener
+                initApplicationEventMulticaster();// 初始化事件广播器，待会扫描以注解形式存在的listener
 
-                onRefresh();
+                onRefresh(); // context容器进行onRefresh，servletContext会在这个时候创建tomcat
 
-                // Check for listener beans and register them.
-                registerListeners();
+                registerListeners();// 待会扫描以注解形式存在的listener
 
-                // Instantiate all remaining (non-lazy-init) singletons.
-                finishBeanFactoryInitialization(beanFactory);
+                finishBeanFactoryInitialization(beanFactory); // 加载LoadTimeWeaverAware(增加AOP，通过修改字节码实现AOP)，冻结配置，初始化所有的bean(单例、notLazy)
 
                 // Last step: publish corresponding event.
                 finishRefresh();
@@ -80,10 +78,10 @@ registerSingleton|getSingleton|getSingletonNames等方法
 getParentBeanFactory|containsLocalBean 只有两个方法
    
 ## 4. **BeanDefinitionRegistry**
-> 注册bean的定义:BeanDefinition是包含了bean的所有信息，bean名称、class名称、是否单例、isPrimary、包括bean的依赖关系等  
+> 注册bean的定义:BeanDefinition是包含了bean的所有信息，class名称、是否单例、isLazy、isPrimary、bean的依赖关系等  
 > BeanDefinition包含了class的各种信息，但是不会初始化class，也就是说不会加载class到jvm中，主要通过ASM字节码读取器来解析class字节码的内容  
 > ASM解析class字节码默认实现类```DefaultMethodsMetadataReader```  
-> beanFactory会先扫描所有的class，通过AMS既可以读取class内容也不会加载class，然后符合条件的bean
+> beanFactory通过调用BeanFactoryPostProcessor主要的实现[ConfigurationClassPostProcessor]({{ "/解析spring是如何向beanFactory注册bean的" | relative_url }})先扫描所有的class，通过AMS既可以读取class内容也不会加载class，然后符合条件的bean会包装成BeanDefinition注册到beanFactory中
 
 registerBeanDefinition|removeBeanDefinition|
 getBeanDefinition|getBeanDefinitionNames 等方法
@@ -142,7 +140,7 @@ setTypeConverter|setConversionService等其他方法
 BeanFactoryPostProcessor：顾名思义，针对beanFactory初始化后的后置处理  
 可能针对beanFactory注册一些其他的bean  
 可能针对beanFactory移除一些bean  
-BeanFactoryPostProcessor最重要的实现[ConfigurationClassPostProcessor，扫描所有的bean]{{ "/解析spring是如何向beanFactory注册bean的" | relative_url }})  
+BeanFactoryPostProcessor最重要的实现[ConfigurationClassPostProcessor，会扫描所有的bean]({{ "/解析spring是如何向beanFactory注册bean的" | relative_url }})  
 
 # beanFactory加载bean的流程(顺序)
 beanFactory用来创建bean的，既然是创建、那么肯定有创建的顺序  
