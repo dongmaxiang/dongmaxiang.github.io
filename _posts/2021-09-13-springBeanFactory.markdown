@@ -117,7 +117,7 @@ setTypeConverter|setConversionService等其他方法
   注册一个bean，其他依赖此类型的，可以直接用，autowiredValue不会放到bean工厂中，只会为其他类提供依赖  
 **ignoreDependencyInterface(Class<?> ifc);**  
 自动装配时忽略ifc类型的接口，通常配合beanFactory的[addBeanPostProcessor](#5-注册拦截bean创建的bean处理器-beanpostprocessor)一起使用。当bean初始化完后，[BeanPostProcessor](#5-注册拦截bean创建的bean处理器-beanpostprocessor)专门处理ifc的字段  
-如常用的ApplicationContextAware、ApplicationContextAware、ApplicationContextAware等
+如常用的如ServletContextAwareProcessor、EnvironmentAware、ApplicationContextAware等
 **registerScope(String scopeName, Scope scope);**  
 除单例和prototype之外有request、session等bean的生命周期定义都是由这个方法完成注册。通过Scope接口中的get方法获取bean
 
@@ -162,10 +162,13 @@ BeanDefinitionRegistryPostProcessor：针对[BeanDefinitionRegistry](#4-beandefi
     7. 然后从beanFactory获取```BeanFactoryPostProcessor```类型的所有BeanName，优先调用实现了```PriorityOrdered```的接口，在调用实现了```Ordered```的接口，最后未调用过的经[排序]({{ "/spring对Bean的排序" | relative_url }})之后在调用
   
 ## 5. 注册拦截bean创建的bean处理器-BeanPostProcessor
+BeanPostProcessor：bean在实例化时会经过BeanPostProcessor处理，最终暴露的bean为BeanPostProcessor处理之后的bean  
+MergedBeanDefinitionPostProcessor：[BeanDefinition](#4-beandefinitionregistry)表示一个bean的信息，bean在实例化之前会经过此类处理BeanDefinition，优先级比BeanPostProcessor高  
 <font color='red'>MergedBeanDefinitionPostProcessor是BeanPostProcessor的子类，bean在创建前会优先调用MergedBeanDefinitionPostProcessor</font>
-BeanPostProcessor：bean在实例化时会经过BeanPostProcessor处理，最终暴露的bean由BeanPostProcessor处理后返回  
-MergedBeanDefinitionPostProcessor：[BeanDefinition](#4-beandefinitionregistry)表示一个bean的信息，bean在实例化之前会经过此类处理RootBeanDefinition，优先级比BeanPostProcessor高
-> 
-
+> MergedBeanDefinitionPostProcessor的实现有最重要的AutowiredAnnotationBeanPostProcessor(自动装配)、AutowiredAnnotationBeanPostProcessor(初始化方法的调用)等。。。  
+> BeanPostProcessor常见的有各种AwareProcessor，如ServletContextAwareProcessor、ApplicationContextAwareProcessor等
 
 * BeanPostProcessor注册顺序是什么呢？(bean在创建的时候-调用顺序同注册的顺序)
+1. 从beanFactory获取是```BeanPostProcessor```类型的所有beanNames
+2. 遍历所有的beanNames，优先注册实现了```PriorityOrdered```的接口、然后在注册实现了```Ordered```的接口，最后未注册过的经[排序]({{ "/spring对Bean的排序" | relative_url }})之后在注册
+3. 等所有的BeanPostProcessor注册完之后，如果是MergedBeanDefinitionPostProcessor类型的话注册顺序都会移到最后面哦
