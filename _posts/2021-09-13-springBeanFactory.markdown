@@ -148,7 +148,7 @@ setTypeConverter|setConversionService等其他方法
 调用beanFactory的后置处理(beanFactory已经创建了)    
 BeanFactoryPostProcessor：针对[ConfigurableListableBeanFactory](#8-configurablelistablebeanfactoryconfigurablebeanfactory)初始化后的后置处理  
 BeanDefinitionRegistryPostProcessor：针对[BeanDefinitionRegistry](#4-beandefinitionregistry)初始化后的后置处理  
-<font color='red'>BeanDefinitionRegistryPostProcessor是BeanFactoryPostProcessor的子类，优先调用BeanDefinitionRegistryPostProcessor</font>
+<font color='red'>BeanDefinitionRegistryPostProcessor是BeanFactoryPostProcessor的子类，会优先调用子类</font>
 > 针对beanFactory注册一些的bean、移除一些bean，等其他操作  
 总之beanFactory不关心具体的实现，只调用后置处理器并把beanFactory作为参数传递过去即可
 
@@ -169,9 +169,10 @@ BeanDefinitionRegistryPostProcessor：针对[BeanDefinitionRegistry](#4-beandefi
     7. 然后从beanFactory获取```BeanFactoryPostProcessor```类型的所有BeanName，优先调用实现了```PriorityOrdered```的接口，在调用实现了```Ordered```的接口，最后未调用过的经[排序]({{ "/spring对Bean的排序" | relative_url }})之后在调用
   
 ## 5. 注册拦截bean创建的bean处理器-BeanPostProcessor
+在实例化某个bean的时候，通过[AutoWireCapableBeanFactory](#7-autowirecapablebeanfactory)自动实例化bean，装配、代理等逻辑，都是通过BeanPostProcessor来完成的  
 BeanPostProcessor：bean在实例化时会经过BeanPostProcessor处理，最终暴露的bean为BeanPostProcessor处理之后的bean  
 MergedBeanDefinitionPostProcessor：[BeanDefinition](#4-beandefinitionregistry)表示一个bean的信息，bean在实例化之前会经过此类处理BeanDefinition，优先级比BeanPostProcessor高  
-<font color='red'>MergedBeanDefinitionPostProcessor是BeanPostProcessor的子类，bean在创建前会优先调用MergedBeanDefinitionPostProcessor</font>
+<font color='red'>MergedBeanDefinitionPostProcessor是BeanPostProcessor的子类，bean在创建前会优先调用子类</font>
 > MergedBeanDefinitionPostProcessor的实现有最重要的AutowiredAnnotationBeanPostProcessor(自动装配)、AutowiredAnnotationBeanPostProcessor(初始化方法的调用)等。。。  
 > BeanPostProcessor常见的有各种AwareProcessor，如ServletContextAwareProcessor、ApplicationContextAwareProcessor等
 
