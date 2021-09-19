@@ -13,7 +13,7 @@ tags: [log,线上问题]
 
 # 问题分析
 好在运维人员配置了自动dumpMemory  
->  -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/applicationNameHeapdump.hprof   
+>  **[-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/applicationNameHeapdump.hprof]({{ "/JVM所有的参数配置详解" | relative_url}})**   
 >  在JVM内存溢出的时候自动dump内存快照,HeapDumpPath指定dump的路径，不指定的话默认输出路径为项目的根路径  
 >  经本地main方法测验，只要dump过一次，之后多次出现的oom不会dump第二次(删除dump的文件也不行)
 

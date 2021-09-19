@@ -1,0 +1,13 @@
+---
+layout: post
+title: JVM所有的参数配置详解
+permalink: /JVM所有的参数配置详解
+date: 2021-09-19 13:21:03.000000000 +08:00
+categories: [java,jvm]
+tags: [jvm]
+---
+# 启动时输出jvm所有的配置
+1. -XX:+PrintFlagsFinal
+
+# 启动时输出非默认的jvm参数(人为配置的)
+1. -XX:+PrintCommandLineFlags
