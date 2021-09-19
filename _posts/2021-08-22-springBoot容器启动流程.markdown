@@ -101,12 +101,16 @@ springDevTools就是用到了此事件，把类加载器给换了一下，起到
 [配置环境变量加载配置文件资源等]({{ "/分析spring的Environment主要流程加载" | relative_url }})---发出环境配置已就绪事件  
 nacos和springCloud远程加载配置文件就是用到了此事件，后期咱们会有详细的分析  
 > 事件发出之后，马上就要实例化ApplicationContext了，不同的WebApplicationType，context不同   
-> 不管什么样的context，都会持有beanFactory,并且都会向beanFactory注册一个非常重要的bean=[ConfigurationClassPostProcessor，会扫描所有的bean]({{ "/解析spring是如何向beanFactory注册bean的" | relative_url }})  
+> 不管什么样的context，都会持有beanFactory,并且都会向beanFactory注册一个非常重要的bean  
+> 注册代码```AnnotationConfigUtils#registerAnnotationConfigProcessors```  
+> [=ConfigurationClassPostProcessor]({{ "/解析spring是如何向beanFactory注册bean的" | relative_url }})，在[beanFactory执行后置处理](/springBeanFactory流程解析#4-调用beanfactorypostprocessors)时，会调用此类，并扫描所有的bean  
 > 实例化完后会发布事情通知容器已经实例化，调用ApplicationContextInitializer的initialize
 
 3. contextPrepared -》ApplicationContextInitializedEvent    
 容器准备---发出应用程序上下文初始化事件  
-contextPrepared之后springBoot会把main方法所在的类注册到beanFactory中
+**contextPrepared之后springBoot会把main方法所在的类注册到beanFactory中**  
+beanFactory在执行[beanFactory执行后置处理](/springBeanFactory流程解析#4-调用beanfactorypostprocessors)时，会调用[ConfigurationClassPostProcessor  
+ConfigurationClassPostProcessor通过扫描beanFactory所有注册的bean上的注解继而扫描其他的bean(包)](/解析spring是如何向beanFactory注册bean的)
 
 4. contextLoaded -》ApplicationPreparedEvent  
 容器已加载完毕---发出应用程序已准备就绪事件
