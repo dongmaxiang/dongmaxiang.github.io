@@ -51,7 +51,7 @@ public enum TenantField implements IEnums<String> {
 
 # 读取数据库的多租户信息
 这个是MYSQL的获取表字段的方式哦，其他类型的数据库请参考其文档
-ToString.lazyJson 可参考[优雅打印日志]({{ "/java如何优雅的打印log" | relative_url }})
+LogUtils.lazyJson 可参考[优雅打印日志]({{ "/java如何优雅的打印log" | relative_url }})
 ```java
 
     @Autowired
@@ -71,7 +71,7 @@ ToString.lazyJson 可参考[优雅打印日志]({{ "/java如何优雅的打印lo
                 .map(TenantField::getDbFieldNames)
                 .flatMap(Arrays::stream)
                 .collect(Collectors.toSet());
-        log.info("tenant init all supports column names:\n{}", ToString.lazyJson(tenantColumnNameSet));
+        log.info("tenant init all supports column names:\n{}", LogUtils.lazyJson(tenantColumnNameSet));
 
         try (Connection connection = dataSource.getConnection()) {
             String catalog = connection.getCatalog();
@@ -93,7 +93,7 @@ ToString.lazyJson 可参考[优雅打印日志]({{ "/java如何优雅的打印lo
                 }
             }
         }
-        log.info("tenant init table name and tenant column name :\n{}", ToString.lazyJson(tableName$tenantField_map));
+        log.info("tenant init table name and tenant column name :\n{}", LogUtils.lazyJson(tableName$tenantField_map));
     }
 
 ```

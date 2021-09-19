@@ -11,17 +11,15 @@ tags: [log]
 2 如果有字符串拼接或者toJSON的情况，打印log之前判断该级别是否开启，不然会白白浪费cpu  
 3 对于第2点可优化的地方，用下面的util，这样配合着第1点，就不用写判断日志级别是否开启的代码了  
 ```java
-/**
- * 日志util。toString专用
- */
-public abstract class ToString {
+public abstract class LogUtils {
 
-    public static ToString lazyJson(Object object) {
-        return new ToString() {
+    public static LogUtils lazyJson(Object object) {
+        return new LogUtils() {
             String json = null;
             @Override
+            // 只有在输出的时候在toJSON，并且如果是集合的类型限制最多输出100个
             public String toString() {
-                return json != null ? json : (json = JSON.toJSONString(object));
+                return json != null ? json : (json = JSON.toJSONString(object, JSONMaxSerializeConfig.MAX_100_SERIALIZE_CONFIG));
             }
         };
     }
@@ -29,5 +27,91 @@ public abstract class ToString {
 ```
 例如：
 ```java
-log.info("我要打印一个实体，想在开启info级别的情况下toJSON，还不想写if代码，实体：{}", ToString.lazyJson(实体));
+log.info("我要打印一个实体，想在开启info级别的情况下toJSON，还不想写if代码，并且实体里面有集合类型字段的话，最多输出100长度即可：{}", LogUtils.lazyJson(实体));
+```
+
+# 限制序列化的长度  
+日志过多过长也就没有了意义，所以如果是集合类型，我们只打印前100几个，输出过多的日志非常影响服务器性能  
+```java
+// 序列化限制集合的长度
+@Slf4j
+public class JSONMaxSerializeConfig extends SerializeConfig {
+
+    // 常量-最多序列化100个集合
+    // 用法 JSON.toJSONString(object, MAX_100_SERIALIZE_CONFIG)
+    public static final JSONMaxSerializeConfig MAX_100_SERIALIZE_CONFIG = new JSONMaxSerializeConfig(100);
+
+    private final int MAX_SERIALIZE_NUM;
+
+    public JSONMaxSerializeConfig(int MAX_SERIALIZE_NUM) {
+        this.MAX_SERIALIZE_NUM = MAX_SERIALIZE_NUM;
+        this.register(new Module() {
+
+            @Override
+            public ObjectDeserializer createDeserializer(ParserConfig parserConfig, Class aClass) {
+                return null;
+            }
+
+            @Override
+            public ObjectSerializer createSerializer(SerializeConfig serializeConfig, Class aClass) {
+
+                if (AbstractList.class.isAssignableFrom(aClass)) {
+                    return ABSTRACT_LIST_SERIALIZER;
+                }
+
+                if (AbstractSet.class.isAssignableFrom(aClass)) {
+                    return ABSTRACT_SET_SERIALIZER;
+                }
+                // map类型长度限制是否需要限制？
+                return null;
+            }
+        });
+    }
+
+
+    private final ObjectSerializer ABSTRACT_LIST_SERIALIZER = (jsonSerializer, o, o1, type, i) -> {
+        AbstractList<?> list = (AbstractList<?>) o;
+        ListSerializer.instance.write(jsonSerializer, new AbstractList<Object>() {
+            public int size() {
+                if (list.size() > MAX_SERIALIZE_NUM) {
+                    log.warn("序列化输出已超出最大限制，后续的序列化将要舍弃，实际大小:{}, max:{}", list.size(), MAX_SERIALIZE_NUM);
+                }
+                return Math.min(list.size(), MAX_SERIALIZE_NUM);
+            }
+
+            public Object get(int index) {
+                return list.get(index);
+            }
+        }, o1, type, i);
+    };
+
+    private final ObjectSerializer ABSTRACT_SET_SERIALIZER = (jsonSerializer, o, o1, type, i) -> {
+        @SuppressWarnings("unchecked")
+        AbstractSet<Object> set = (AbstractSet<Object>) o;
+        CollectionCodec.instance.write(jsonSerializer, new AbstractSet<Object>() {
+            public Iterator<Object> iterator() {
+                return new Iterator<Object>() {
+                    final Iterator<?> originIterator = set.iterator();
+                    int count = 1;
+
+                    public boolean hasNext() {
+                        count++;
+                        if (count > MAX_SERIALIZE_NUM) {
+                            log.warn("序列化输出已超出最大限制，后续的序列化将要舍弃, max:{}", MAX_SERIALIZE_NUM);
+                        }
+                        return count <= MAX_SERIALIZE_NUM && originIterator.hasNext();
+                    }
+
+                    public Object next() {
+                        return originIterator.next();
+                    }
+                };
+            }
+
+            public int size() {
+                return Math.min(set.size(), MAX_SERIALIZE_NUM);
+            }
+        }, o1, type, i);
+    };
+}
 ```
