@@ -13,13 +13,5 @@ tags: [spring,源码]
 > 在springContext初始化的时候通过```AnnotationConfigUtils#registerAnnotationConfigProcessors```向beanFactory注册该类  
 
 # 工作流程
-该类开始工作时，会扫描beanFactory中已注册的bean, 此时[main方法所在的类已注册到beanFactory中](/springBoot容器启动流程#3-contextprepared--applicationcontextinitializedevent)
-
-**类上必须有```@Configuration```注解**  
-1. ```@Component```
-   
-1. ```@ComponentScan```
-   
-1. ```@Import```
-   
-1. ```@ImportResource```
+该类开始工作时，会扫描beanFactory中已注册的bean, 此时[main方法所在的类已注册到beanFactory中](/springBoot容器启动流程#3-contextprepared--applicationcontextinitializedevent)  
+**类上必须包含注解```@Component、@ComponentScan、@Import、@ImportResource```:复合注解也可以，或者方法上有```@Bean```注解的也可以**  
