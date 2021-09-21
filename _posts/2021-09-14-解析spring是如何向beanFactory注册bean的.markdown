@@ -89,4 +89,181 @@ tags: [spring,源码]
 ## 10. 继续扫描当前class的父类，直到为Object为止
 继续从步骤2开始
   
+
+# 代码流程
+
+## 步骤1的代码  
+```java
+public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPostProcessor, PriorityOrdered, ResourceLoaderAware, BeanClassLoaderAware, EnvironmentAware {
+  ...
+  public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
+    ...
+    ConfigurationClassParser parser = new ConfigurationClassParser(
+            this.metadataReaderFactory, this.problemReporter, this.environment,
+            this.resourceLoader, this.componentScanBeanNameGenerator, registry);
+
+    Set<BeanDefinitionHolder> candidates = new LinkedHashSet<>(configCandidates);
+    Set<ConfigurationClass> alreadyParsed = new HashSet<>(configCandidates.size());
+    do {
+      parser.parse(candidates);
+      parser.validate();
+
+      Set<ConfigurationClass> configClasses = new LinkedHashSet<>(parser.getConfigurationClasses());
+      configClasses.removeAll(alreadyParsed);
+
+      // Read the model and create bean definitions based on its content
+      if (this.reader == null) {
+        this.reader = new ConfigurationClassBeanDefinitionReader(
+                registry, this.sourceExtractor, this.resourceLoader, this.environment,
+                this.importBeanNameGenerator, parser.getImportRegistry());
+      }
+      this.reader.loadBeanDefinitions(configClasses);
+      alreadyParsed.addAll(configClasses);
+
+      candidates.clear();
+      if (registry.getBeanDefinitionCount() > candidateNames.length) {
+        String[] newCandidateNames = registry.getBeanDefinitionNames();
+        Set<String> oldCandidateNames = new HashSet<>(Arrays.asList(candidateNames));
+        Set<String> alreadyParsedClasses = new HashSet<>();
+        for (ConfigurationClass configurationClass : alreadyParsed) {
+          alreadyParsedClasses.add(configurationClass.getMetadata().getClassName());
+        }
+        for (String candidateName : newCandidateNames) {
+          if (!oldCandidateNames.contains(candidateName)) {
+            BeanDefinition bd = registry.getBeanDefinition(candidateName);
+            if (ConfigurationClassUtils.checkConfigurationClassCandidate(bd, this.metadataReaderFactory) &&
+                    !alreadyParsedClasses.contains(bd.getBeanClassName())) {
+              candidates.add(new BeanDefinitionHolder(bd, candidateName));
+            }
+          }
+        }
+        candidateNames = newCandidateNames;
+      }
+    }
+    while (!candidates.isEmpty());
+    ...
+  }
+  ...
+}
+```
+
+## 步骤3的代码
+
+```java
+class ConfigurationClassParser {
+  ...
+  protected void processConfigurationClass(ConfigurationClass configClass, Predicate<String> filter) throws IOException {
+    if (this.conditionEvaluator.shouldSkip(configClass.getMetadata(), ConfigurationPhase.PARSE_CONFIGURATION)) {
+      return;
+    }
+
+    ConfigurationClass existingClass = this.configurationClasses.get(configClass);
+    if (existingClass != null) {
+      if (configClass.isImported()) {
+        if (existingClass.isImported()) {
+          existingClass.mergeImportedBy(configClass);
+        }
+        // Otherwise ignore new imported config class; existing non-imported class overrides it.
+        return;
+      }
+      else {
+        // Explicit bean definition found, probably replacing an import.
+        // Let's remove the old one and go with the new one.
+        this.configurationClasses.remove(configClass);
+        this.knownSuperclasses.values().removeIf(configClass::equals);
+      }
+    }
+
+    // Recursively process the configuration class and its superclass hierarchy.
+    SourceClass sourceClass = asSourceClass(configClass, filter);
+    do {
+      sourceClass = doProcessConfigurationClass(configClass, sourceClass, filter);
+    }
+    while (sourceClass != null);
+
+    this.configurationClasses.put(configClass, configClass);
+  }
+  ...
+}
+```
+
+## 步骤4-10的代码
+```java
+class ConfigurationClassParser {
+  ...
+  protected final SourceClass doProcessConfigurationClass(ConfigurationClass configClass, SourceClass sourceClass, Predicate<String> filter) {
+
+    // 处理内嵌的类
+    if (configClass.getMetadata().isAnnotated(Component.class.getName())) {
+      processMemberClasses(configClass, sourceClass, filter);
+    }
+
+    // Process any @PropertySource annotations
+    for (AnnotationAttributes propertySource : AnnotationConfigUtils.attributesForRepeatable(sourceClass.getMetadata(), 
+            PropertySources.class, org.springframework.context.annotation.PropertySource.class)) {
+      if (this.environment instanceof ConfigurableEnvironment) {
+        processPropertySource(propertySource);
+      }
+      ...
+    }
+
+    // Process any @ComponentScan annotations
+    Set<AnnotationAttributes> componentScans = AnnotationConfigUtils.attributesForRepeatable(sourceClass.getMetadata(), ComponentScans.class, ComponentScan.class);
+    if (!componentScans.isEmpty() && !this.conditionEvaluator.shouldSkip(sourceClass.getMetadata(), ConfigurationPhase.REGISTER_BEAN)) {
+      for (AnnotationAttributes componentScan : componentScans) {
+        // The config class is annotated with @ComponentScan -> perform the scan immediately
+        Set<BeanDefinitionHolder> scannedBeanDefinitions = this.componentScanParser.parse(componentScan, sourceClass.getMetadata().getClassName());
+        // Check the set of scanned definitions for any further config classes and parse recursively if needed
+        for (BeanDefinitionHolder holder : scannedBeanDefinitions) {
+          BeanDefinition bdCand = holder.getBeanDefinition().getOriginatingBeanDefinition();
+          if (bdCand == null) {
+            bdCand = holder.getBeanDefinition();
+          }
+          if (ConfigurationClassUtils.checkConfigurationClassCandidate(bdCand, this.metadataReaderFactory)) {
+            parse(bdCand.getBeanClassName(), holder.getBeanName());
+          }
+        }
+      }
+    }
+
+    // Process any @Import annotations
+    processImports(configClass, sourceClass, getImports(sourceClass), filter, true);
+
+    // Process any @ImportResource annotations
+    AnnotationAttributes importResource = AnnotationConfigUtils.attributesFor(sourceClass.getMetadata(), ImportResource.class);
+    if (importResource != null) {
+      String[] resources = importResource.getStringArray("locations");
+      Class<? extends BeanDefinitionReader> readerClass = importResource.getClass("reader");
+      for (String resource : resources) {
+        String resolvedResource = this.environment.resolveRequiredPlaceholders(resource);
+        configClass.addImportedResource(resolvedResource, readerClass);
+      }
+    }
+
+    // Process individual @Bean methods
+    Set<MethodMetadata> beanMethods = retrieveBeanMethodMetadata(sourceClass);
+    for (MethodMetadata methodMetadata : beanMethods) {
+      configClass.addBeanMethod(new BeanMethod(methodMetadata, configClass));
+    }
+
+    // Process default methods on interfaces
+    processInterfaces(configClass, sourceClass);
+
+    // Process superclass, if any
+    if (sourceClass.getMetadata().hasSuperClass()) {
+      String superclass = sourceClass.getMetadata().getSuperClassName();
+      if (superclass != null && !superclass.startsWith("java") && !this.knownSuperclasses.containsKey(superclass)) {
+        this.knownSuperclasses.put(superclass, configClass);
+        // Superclass found, return its annotation metadata and recurse
+        return sourceClass.getSuperClass();
+      }
+    }
+
+    // No superclass -> processing is complete
+    return null;
+  }
+  ...
+}
+```
+
 # 总结
