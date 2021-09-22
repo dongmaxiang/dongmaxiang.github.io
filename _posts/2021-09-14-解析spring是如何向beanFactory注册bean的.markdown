@@ -31,8 +31,11 @@ tags: [spring,源码]
 > 1. 执行在扫描期间扫描到的注解[@Import需延后执行的-ImportBeanDefinitionRegistrar](#importbeandefinitionregistrar)现在立马执行 
 
 ## 2. 如果class没有配置注解的话直接跳过
-必须包含@Configuration或@Component、@PropertySources、@ComponentScan、@Import、@ImportResource或方法上有@Bean注解的  
-注解上包含以上注解的也可以---称之为复合注解（组合注解）
+必须有@Configuration  
+或@Component、@PropertySources、@ComponentScan、@Import、@ImportResource  
+或方法上有@Bean注解的  
+注解上包含以上注解的也可以---称之为复合注解（组合注解）  
+> 遇到class：BeanFactoryPostProcessor、BeanPostProcessor、AopInfrastructureBean、EventListenerFactory直接跳过
 
 ## 3. 通过```ConditionEvaluator```判断是否满足条件  
 如果条件不满足(<small>在```ConfigurationPhase.PARSE_CONFIGURATION```期间</small>)则跳过，然后扫描下一个bean，继续从步骤1开始  
@@ -105,11 +108,11 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
     Set<BeanDefinitionHolder> candidates = new LinkedHashSet<>(configCandidates);
     Set<ConfigurationClass> alreadyParsed = new HashSet<>(configCandidates.size());
     do {
-      parser.parse(candidates);
-      parser.validate();
+      parser.parse(candidates);//执行2、3、4、5、6 。。。全部步骤
+      parser.validate();// 对于@Configuration的，类验证是否可以重写内部的方法
 
       Set<ConfigurationClass> configClasses = new LinkedHashSet<>(parser.getConfigurationClasses());
-      configClasses.removeAll(alreadyParsed);
+      configClasses.removeAll(alreadyParsed);// 过滤已经处理过的
 
       // Read the model and create bean definitions based on its content
       if (this.reader == null) {
@@ -117,10 +120,12 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
                 registry, this.sourceExtractor, this.resourceLoader, this.environment,
                 this.importBeanNameGenerator, parser.getImportRegistry());
       }
+      // 步骤1当中的每一个bean，parse完之后都会做的步骤
       this.reader.loadBeanDefinitions(configClasses);
-      alreadyParsed.addAll(configClasses);
+      alreadyParsed.addAll(configClasses); // 添加到已处理过的
 
       candidates.clear();
+      // 过滤未扫描的bean继续扫描，这一块spring开发人员写的不怎么样，阅读起来有点费劲
       if (registry.getBeanDefinitionCount() > candidateNames.length) {
         String[] newCandidateNames = registry.getBeanDefinitionNames();
         Set<String> oldCandidateNames = new HashSet<>(Arrays.asList(candidateNames));
@@ -131,6 +136,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
         for (String candidateName : newCandidateNames) {
           if (!oldCandidateNames.contains(candidateName)) {
             BeanDefinition bd = registry.getBeanDefinition(candidateName);
+            // 如果class没有步骤2中注解的话直接跳过
             if (ConfigurationClassUtils.checkConfigurationClassCandidate(bd, this.metadataReaderFactory) &&
                     !alreadyParsedClasses.contains(bd.getBeanClassName())) {
               candidates.add(new BeanDefinitionHolder(bd, candidateName));
@@ -147,16 +153,76 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 }
 ```
 
+## 步骤2的代码
+```java
+abstract class ConfigurationClassUtils {
+  public static boolean checkConfigurationClassCandidate(BeanDefinition beanDef, MetadataReaderFactory metadataReaderFactory) {
+    ...
+    AnnotationMetadata metadata = // 通过beanDef和metadataReaderFactory获取到metadata;
+    ...
+    // 如果是以下几种的class则至直接跳过，不解析
+    // BeanFactoryPostProcessor、BeanPostProcessor、AopInfrastructureBean、EventListenerFactory
+
+    // 有@Configuration注解  
+    Map<String, Object> config = metadata.getAnnotationAttributes(Configuration.class.getName());
+    if (config != null && !Boolean.FALSE.equals(config.get("proxyBeanMethods"))) {
+      beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
+    }
+    // isConfigurationCandidate: 
+    // 包含@Component、@PropertySources、@ComponentScan、@Import、@ImportResource
+    // 或方法上有@Bean注解的
+    else if (config != null || isConfigurationCandidate(metadata)) {
+      beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
+    }
+    else {
+      return false;
+    }
+    ...
+    return true;
+  }
+  
+  public static boolean isConfigurationCandidate(AnnotationMetadata metadata) {
+    if (metadata.isInterface()) {
+      return false;
+    }
+
+    Set<String> candidateIndicators = new HashSet<>(8);
+    candidateIndicators.add(Component.class.getName());
+    candidateIndicators.add(ComponentScan.class.getName());
+    candidateIndicators.add(Import.class.getName());
+    
+    for (String indicator : candidateIndicators) {
+      if (metadata.isAnnotated(indicator)) {
+        return true;
+      }
+    }
+
+    try {
+      return metadata.hasAnnotatedMethods(Bean.class.getName());
+    }
+    catch (Throwable ex) {
+      ...  
+      return false;
+    }
+  }
+}
+```
+
 ## 步骤3的代码
 
 ```java
 class ConfigurationClassParser {
   ...
+  // 当前类初始化的时候
+  this.conditionEvaluator = new ConditionEvaluator(registry, environment, resourceLoader);
+  
   protected void processConfigurationClass(ConfigurationClass configClass, Predicate<String> filter) throws IOException {
+    // 在PARSE_CONFIGURATION期间判断是否满足条件
     if (this.conditionEvaluator.shouldSkip(configClass.getMetadata(), ConfigurationPhase.PARSE_CONFIGURATION)) {
       return;
     }
 
+    // 如果已经处理过，则有效处理非导入的类，如果都是导入的。则合并导入的类
     ConfigurationClass existingClass = this.configurationClasses.get(configClass);
     if (existingClass != null) {
       if (configClass.isImported()) {
@@ -177,6 +243,7 @@ class ConfigurationClassParser {
     // Recursively process the configuration class and its superclass hierarchy.
     SourceClass sourceClass = asSourceClass(configClass, filter);
     do {
+      // 执行4、5、6、7、8....等全部步骤
       sourceClass = doProcessConfigurationClass(configClass, sourceClass, filter);
     }
     while (sourceClass != null);
@@ -187,7 +254,7 @@ class ConfigurationClassParser {
 }
 ```
 
-## 步骤4-10的代码
+## 步骤4之后的代码
 ```java
 class ConfigurationClassParser {
   ...
@@ -198,7 +265,7 @@ class ConfigurationClassParser {
       processMemberClasses(configClass, sourceClass, filter);
     }
 
-    // Process any @PropertySource annotations
+    // 步骤5的代码
     for (AnnotationAttributes propertySource : AnnotationConfigUtils.attributesForRepeatable(sourceClass.getMetadata(), 
             PropertySources.class, org.springframework.context.annotation.PropertySource.class)) {
       if (this.environment instanceof ConfigurableEnvironment) {
@@ -207,7 +274,7 @@ class ConfigurationClassParser {
       ...
     }
 
-    // Process any @ComponentScan annotations
+    // 步骤6的代码
     Set<AnnotationAttributes> componentScans = AnnotationConfigUtils.attributesForRepeatable(sourceClass.getMetadata(), ComponentScans.class, ComponentScan.class);
     if (!componentScans.isEmpty() && !this.conditionEvaluator.shouldSkip(sourceClass.getMetadata(), ConfigurationPhase.REGISTER_BEAN)) {
       for (AnnotationAttributes componentScan : componentScans) {
@@ -226,10 +293,10 @@ class ConfigurationClassParser {
       }
     }
 
-    // Process any @Import annotations
+    // 步骤7的代码
     processImports(configClass, sourceClass, getImports(sourceClass), filter, true);
 
-    // Process any @ImportResource annotations
+    // 步骤8的代码
     AnnotationAttributes importResource = AnnotationConfigUtils.attributesFor(sourceClass.getMetadata(), ImportResource.class);
     if (importResource != null) {
       String[] resources = importResource.getStringArray("locations");
@@ -240,16 +307,14 @@ class ConfigurationClassParser {
       }
     }
 
-    // Process individual @Bean methods
+    // 步骤9的代码
     Set<MethodMetadata> beanMethods = retrieveBeanMethodMetadata(sourceClass);
     for (MethodMetadata methodMetadata : beanMethods) {
       configClass.addBeanMethod(new BeanMethod(methodMetadata, configClass));
     }
-
-    // Process default methods on interfaces
     processInterfaces(configClass, sourceClass);
 
-    // Process superclass, if any
+    // 步骤10的代码
     if (sourceClass.getMetadata().hasSuperClass()) {
       String superclass = sourceClass.getMetadata().getSuperClassName();
       if (superclass != null && !superclass.startsWith("java") && !this.knownSuperclasses.containsKey(superclass)) {
@@ -265,5 +330,10 @@ class ConfigurationClassParser {
   ...
 }
 ```
+> 有兴趣的可以源码用IDE阅读一番，会有不一样的收获
 
 # 总结
+ConfigurationClassPostProcessor的作用就是扫描类上的注解，继而处理注解对应的功能  
+@Component、@PropertySources、@ComponentScan、@Import、@ImportResource、方法上@Bean的注解都有不同的职责，都是由此类进行处理  
+从[spring启动过程中的refresh](/springBoot容器启动流程#4-contextloaded--applicationpreparedevent)阶段对beanFactory的操作，到[调用beanFactory的后置处理器](/springBeanFactory流程解析#4-调用beanfactorypostprocessors)<small>本文的实现</small>，大体对spring的整体流程有了个全新的概貌  
+此时、beanFactory也初始化、bean的定义也都注册了，接下来我们会[分析bean的实例化流程](/spring对bean实例化的流程)
