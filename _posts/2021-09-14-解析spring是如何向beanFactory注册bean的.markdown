@@ -330,7 +330,7 @@ class ConfigurationClassParser {
   ...
 }
 ```
-> 有兴趣的可以IDE阅读源码一番，会有不一样的收获
+> 有兴趣的可以用IDE阅读源码一番，会有不一样的收获
 
 # 总结
 ConfigurationClassPostProcessor的作用就是扫描类上的注解，继而处理注解对应的功能  
