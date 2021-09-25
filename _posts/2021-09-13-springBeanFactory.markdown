@@ -92,7 +92,7 @@ getBeanDefinition|getBeanDefinitionNames等方法
 **registerBeanDefinition**:BeanDefinition是包含了bean的所有信息，class名称、是否单例、isLazy、isPrimary、bean的属性配置和bean的依赖关系等  
 BeanDefinition包含了class的各种信息，但是不会初始化class，也就是说不会加载class到jvm中，主要通过ASM字节码读取器来解析class字节码的内容  
 > ASM解析class字节码默认实现类```CachingMetadataReaderFactoryPostProcessor#register```  
-> beanFactory通过调用BeanFactoryPostProcessor主要的实现[ConfigurationClassPostProcessor](/解析spring是如何向beanFactory注册bean的)先扫描所有的class，通过AMS既可以读取class内容也不会加载class，然后符合条件的bean会包装成BeanDefinition注册到beanFactory中
+> beanFactory通过调用[BeanFactoryPostProcessor](#4-调用beanfactorypostprocessors)主要的实现[ConfigurationClassPostProcessor](/解析spring是如何向beanFactory注册bean的)先扫描所有的class，通过AMS既可以读取class内容也不会加载class，然后符合条件的bean会包装成BeanDefinition注册到beanFactory中
    
 ## 5. AliasRegistry
 > 为注册bean的别名，通过别名也可以获取到bean，主要作用就是注册bean的别名  
