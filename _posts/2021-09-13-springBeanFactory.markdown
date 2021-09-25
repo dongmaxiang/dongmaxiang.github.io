@@ -89,8 +89,9 @@ getParentBeanFactory|containsLocalBean 只有两个方法
 registerBeanDefinition|removeBeanDefinition|
 getBeanDefinition|getBeanDefinitionNames等方法  
 
-**registerBeanDefinition**:BeanDefinition是包含了bean的所有信息，class名称、是否单例、isLazy、isPrimary、bean的属性配置和bean的依赖关系等  
-BeanDefinition包含了class的各种信息，但是不会初始化class，也就是说不会加载class到jvm中，主要通过ASM字节码读取器来解析class字节码的内容  
+**registerBeanDefinition**:BeanDefinition是包含了bean的所有信息，bean的名称、bean的class、scope、isLazy、isPrimary、bean的属性和bean的依赖关系等  
+beanFactory获取一个bean时，除非bean已经存在，否则会通过beanDefinition自动创建，没有beanDefinition就会报错，所以beanDefinition是一个很重要的存在  
+BeanDefinition包含了class的各种信息如注解的信息、class的资源路径等，但是不会初始化class，也就是说不会加载class到jvm中，主要通过ASM字节码读取器来解析class字节码的内容  
 > ASM解析class字节码默认实现类```CachingMetadataReaderFactoryPostProcessor#register```  
 > beanFactory通过调用[BeanFactoryPostProcessor](#4-调用beanfactorypostprocessors)主要的实现[ConfigurationClassPostProcessor](/解析spring是如何向beanFactory注册bean的)先扫描所有的class，通过AMS既可以读取class内容也不会加载class，然后符合条件的bean会包装成BeanDefinition注册到beanFactory中
    
@@ -171,20 +172,31 @@ BeanDefinitionRegistryPostProcessor：针对[BeanDefinitionRegistry](#4-beandefi
     7. 然后从beanFactory获取```BeanFactoryPostProcessor```类型的所有BeanName，优先调用实现了```PriorityOrdered```的接口，在调用实现了```Ordered```的接口，最后未调用过的经[排序]({{ "/spring对Bean的排序" | relative_url }})之后在调用
   
 ## 5. 注册拦截bean创建的bean处理器-BeanPostProcessor
-> 在实例化某个bean的时候，通过[AutoWireCapableBeanFactory](#7-autowirecapablebeanfactory)自动实例化bean，装配、代理等逻辑，都是通过BeanPostProcessor来完成的  
-> 常见的有各种AwareProcessor，如ServletContextAwareProcessor、ApplicationContextAwareProcessor以及最重要的AutowiredAnnotationBeanPostProcessor自动装配等。。。
+* BeanPostProcessor为最顶层的接口，共有5种类型不同作用的间接接口（包含自己）
+  1. **InstantiationAwareBeanPostProcessor**
+     可以拦截bean实例化之前，如果返回不为空，则直接调用`BeanPostProcessor`的后置方法并直接返回，此时bean已创建完毕（很少用）  
+     postProcessAfterInstantiation： 返回Boolean，如果返回为false则不允许自动装配（很少用）  
+     postProcessProperties：自动装配  
+     最重要的实现`AutowiredAnnotationBeanPostProcessor`实现自动装配
+  2. MergedBeanDefinitionPostProcessor(很少用)  
+     如果第一步没有拦截实例化、则会通过[beanDefinition](#4-beandefinitionregistry)准备实例化，实例化之前可以拦截beanDefinition做一些修改  
+     
+  3. **BeanPostProcessor**  
+     可以拦截(bean实例化)之后和(初始化方法)之后：如各种Aware
+     
+  4. SmartInstantiationAwareBeanPostProcessor  
+     提供早期的引用：如果是单例，并且是循环引用的情况下  
+     predictBeanType：Predict the type of the bean to be eventually returned from this（返回可以为null）  
+     determineCandidateConstructors：Determine the candidate constructors to use for the given bean.(返回可以为null)
 
-BeanPostProcessor：bean在实例化时会经过BeanPostProcessor处理，最终暴露的bean为BeanPostProcessor处理之后的bean  
-MergedBeanDefinitionPostProcessor：[BeanDefinition](#4-beandefinitionregistry)表示一个bean的所有信息，bean在实例化之前会经过此类处理BeanDefinition，优先级比BeanPostProcessor高  
-<font color='red'>MergedBeanDefinitionPostProcessor是BeanPostProcessor的子类，bean在创建前会优先调用子类</font>
+  5. DestructionAwareBeanPostProcessor  
+    bean在销毁时会调用
+    
 
-* BeanPostProcessor注册顺序是什么呢？(bean在创建的时候-调用顺序同注册的顺序)
-
-1. 从beanFactory获取```BeanPostProcessor```类型的所有beanNames  
-2. 遍历所有的beanNames，优先注册实现了```PriorityOrdered```的接口、然后在注册实现了```Ordered```的接口，最后未注册过的经[排序]({{ "/spring对Bean的排序" | relative_url }})之后在注册  
-3. 等所有的BeanPostProcessor注册完之后，如果是MergedBeanDefinitionPostProcessor类型的话注册顺序都会移到最后面哦  
-  * <small>  但是在bean实例化之前会优先调用MergedBeanDefinitionPostProcessor(按照注册的顺序)处理BeanDefinition</small>  
-  * <small>  通过BeanDefinition实例化完对象之后才会调用BeanPostProcessor(按照注册的顺序)</small>
+* BeanPostProcessor注册顺序是什么呢？
+  1. 从beanFactory获取```BeanPostProcessor```类型的所有beanNames  
+  2. 遍历所有的beanNames，优先注册实现了```PriorityOrdered```的接口、然后在注册实现了```Ordered```的接口，最后未注册过的经[排序]({{ "/spring对Bean的排序" | relative_url }})之后在注册  
+  3. 等所有的BeanPostProcessor注册完之后，如果是MergedBeanDefinitionPostProcessor类型的话注册顺序都会移到最后面哦  
 
 ## 6. 初始化国际化资源
 

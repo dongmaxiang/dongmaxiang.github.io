@@ -7,8 +7,8 @@ categories: [java,spring]
 tags: [spring,源码]
 ---
 
-获取bean时，如果不存在则会创建,并自动装配，然后调用初始化的方法  
-spring底层通过name获取对应的bean，如果是根据类型，那么他会现根据类型先获取name，然后根据name在获取bean  
+获取bean时，如果不存在则会创建  
+spring底层通过name获取对应的bean，如果是根据类型，那么他会先根据类型先获取name，然后根据name在获取bean  
 springBean名称可以自定义，如果非自定义默认则是classSimpleName，且第一个字母小写  
 FactoryBean的类型也是,如果要获取FactoryBean类型的实例话，则beanName要以"&"为前缀。否则获取的就是factoryBean对应的实际bean  
 下下为获取(创建)bean的大体流程  
@@ -61,4 +61,17 @@ spring对非单例的循环引用会直接报错```throw new BeanCurrentlyInCrea
 4. 确保`dependsOn`的beanName优先[初始化](#1-把beanname转换为为标准的beanname)  
    > `@DependsOn`注解或其他
 
-5. 
+5. 判断bean的作用域
+  首先判断作用域、单例则直接创建，其他作用域则在创建前会把beanName放入```prototypesCurrentlyInCreation```中  
+  如果有循环引用直接报错(通过`prototypesCurrentlyInCreation`判断是否包含bean的名称)，单例的循环引用不报错，最后创建完则从中移除  
+  > 自定义的作用域(非单例，非`prototype`)，都会从`scopes`中取对应的scope实现，比如servlet实现的session、request  
+
+6. 通过RootBeanDefinition获取真实的class  
+如果存在tempClassLoader，则用tempClassLoader加载class，不管用什么，都不会初始化class，除非已经初始化过
+>  一旦class已初始化，并且LoadTimeWeaver未加载，那么通过字节码织入的aop对当前的class将会失效
+
+7. 通过`InstantiationAwareBeanPostProcessor`提前实例化  
+此类为[`BeanFactoryPostProcessor`](/springBeanFactory流程解析#5-注册拦截bean创建的bean处理器-beanpostprocessor)的子类  
+
+8. 未提前实例化的bean则通过`beanDefinition`获取`BeanWrapper`  
+`BeanWrapper`为一个实例的包装，包含了实例所有字段的描述、class信息、设置和获取property等信息  
