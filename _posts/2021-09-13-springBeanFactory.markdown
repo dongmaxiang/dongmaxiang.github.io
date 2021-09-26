@@ -174,18 +174,18 @@ BeanDefinitionRegistryPostProcessor：针对[BeanDefinitionRegistry](#4-beandefi
 ## 5. 注册拦截bean创建的bean处理器-BeanPostProcessor
 * BeanPostProcessor为最顶层的接口，共有5种类型不同作用的间接接口（包含自己）
   1. **InstantiationAwareBeanPostProcessor**
-     可以拦截bean实例化之前，如果返回不为空，则直接调用`BeanPostProcessor`的后置方法并直接返回，此时bean已创建完毕（很少用）  
-     postProcessAfterInstantiation： 返回Boolean，如果返回为false则不允许自动装配（很少用）  
-     postProcessProperties：自动装配  
-     最重要的实现`AutowiredAnnotationBeanPostProcessor`实现自动装配
+     可以拦截bean实例化之前（不包含factoryBean#getObject），如果返回不为空，则直接调用`BeanPostProcessor`的后置方法并直接返回，此时bean已创建完毕（很少用）  
+     postProcessAfterInstantiation： 返回值为Boolean类型，如果返回为false则不允许自动装配（很少用）  
+     postProcessProperties：最重要的实现`AutowiredAnnotationBeanPostProcessor`实现自动装配
+     
   2. MergedBeanDefinitionPostProcessor(很少用)  
      如果第一步没有拦截实例化、则会通过[beanDefinition](#4-beandefinitionregistry)准备实例化，实例化之前可以拦截beanDefinition做一些修改  
      
   3. **BeanPostProcessor**  
-     可以拦截(bean实例化)之后和(初始化方法)之后：如各种Aware
+     可以拦截(bean实例化)之后和(初始化方法)之后：如各种Aware的处理，以及@PostConstruct方法的调用等
      
-  4. SmartInstantiationAwareBeanPostProcessor  
-     提供早期的引用：如果是单例，并且是循环引用的情况下  
+  4. **SmartInstantiationAwareBeanPostProcessor**  
+     提供早期的引用：如果是单例，并且是循环引用的情况下，最重要的实现`InfrastructureAdvisorAutoProxyCreator`实现事务aop拦截，且可以循环引用
      predictBeanType：Predict the type of the bean to be eventually returned from this（返回可以为null）  
      determineCandidateConstructors：Determine the candidate constructors to use for the given bean.(返回可以为null)
 
