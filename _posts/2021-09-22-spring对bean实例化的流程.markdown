@@ -41,7 +41,9 @@ beanName可以自定义，如果非自定义默认则是classSimpleName，且第
   如果参数beanName是以"&"为前缀，代表要获取FactoryBean类型的class，如果上一步获取到的class不是FactoryBean类型，则返回null  
   如果参数beanName不是以"&"为前缀，代表要获取真实bean的类型，如果上一步获取到的不是FactoryBean类型，则直接返回  
   如果是FactoryBean类型，优先根据泛型获取对应的type，如果获取失败则要进行初始化FactoryBean,因为一会要调用`Factory#getObjectType`来返回真实的类型  
-  > 如果要初始化factoryBean，并且factoryBean本身是单例的话则会放入缓存中，[保证不能有二次初始化](#)
+  创建流程请参考`AbstractAutowireCapableBeanFactory#createBeanInstance`(包含了构造注入)，会返回一个BeanWrapper  
+  > beanDefinition为class定义的各种信息，beanWrapper为实例化之后的各种信息  
+  > 初始化完BeanFactory之后(由beanWrapper包装)，并且factoryBean本身是单例的话则会放入缓存中`factoryBeanInstanceCache`[保证不能有二次初始化](#未提前实例化的bean则通过)
 
 ### 根据class获取对应的beanNames流程
 
@@ -105,6 +107,7 @@ spring对非单例的循环引用会直接报错```throw new BeanCurrentlyInCrea
 
 7. 通过`InstantiationAwareBeanPostProcessor`提前实例化  
   此类为[`BeanPostProcessor`](/springBeanFactory流程解析#5-注册拦截bean创建的bean处理器-beanpostprocessor)的子类  
+  可以拦截bean实例化之前（`不包含factoryBean#getObject`），如果返回不为空，则直接调用`BeanPostProcessor`的后置方法并直接返回，此时bean已创建完毕（很少用）  
 
-8. 未提前实例化的bean则通过`beanDefinition`获取`BeanWrapper`  
-  `BeanWrapper`为一个实例的包装，包含了实例所有字段的描述、class信息、设置和获取property等信息  
+8. <span id='未提前实例化的bean则通过'>未提前实例化的bean则通过`beanDefinition`获取`BeanWrapper`</span>  
+  > beanDefinition为class定义的各种信息，beanWrapper为实例化的包装，包含一个实例的各种信息  

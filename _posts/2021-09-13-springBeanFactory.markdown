@@ -92,7 +92,7 @@ getBeanDefinition|getBeanDefinitionNames等方法
 **registerBeanDefinition**:BeanDefinition是包含了bean的所有信息，bean的名称、bean的class、scope、isLazy、isPrimary、bean的属性和bean的依赖关系等  
 beanFactory获取一个bean时，除非bean已经存在，否则会通过beanDefinition自动创建，没有beanDefinition就会报错，所以beanDefinition是一个很重要的存在  
 BeanDefinition包含了class的各种信息如注解的信息、class的资源路径等，但是不会初始化class，也就是说不会加载class到jvm中，主要通过ASM字节码读取器来解析class字节码的内容  
-> ASM解析class字节码默认实现类`SimpleMetadataReaderFactory`，由`SharedMetadataReaderFactoryContextInitializer`在[spring启动阶段的](/springBoot容器启动流程)中的`context#initialize`注册  
+> ASM解析class字节码默认实现类`SimpleMetadataReaderFactory`，由`SharedMetadataReaderFactoryContextInitializer`在spring启动阶段中的`context#initialize`注册  
 > beanFactory通过调用[BeanFactoryPostProcessor](#4-调用beanfactorypostprocessors)主要的实现[ConfigurationClassPostProcessor](/解析spring是如何向beanFactory注册bean的)先扫描所有的class，通过AMS既可以读取class内容也不会加载class，然后符合条件的bean会包装成BeanDefinition注册到beanFactory中
    
 ## 5. AliasRegistry
@@ -120,7 +120,7 @@ applyBeanPostProcessorsBeforeInitialization|applyBeanPostProcessorsBeforeInitial
 > 生产bean时、装配时、类型转化时、销毁bean、冻结等配置各种各样的组件供方便使用
 
 registerResolvableDependency|ignoreDependencyInterface|
-registerScope|getRegisteredScope|  
+registerScope|addBeanPostProcessor|  
 freezeConfiguration|isConfigurationFrozen|  
 preInstantiateSingletons|destroySingletons|
 setTypeConverter|setConversionService等其他方法  
@@ -128,7 +128,7 @@ setTypeConverter|setConversionService等其他方法
 **registerResolvableDependency(Class<?> dependencyType, @Nullable Object autowiredValue);**  
   注册一个bean，其他依赖此类型的，可以直接用，autowiredValue不会放到bean工厂中，只会为其他类提供依赖  
 **ignoreDependencyInterface(Class<?> ifc);**  
-自动装配时忽略ifc类型的接口，通常配合beanFactory的[addBeanPostProcessor](#5-注册拦截bean创建的bean处理器-beanpostprocessor)一起使用。当bean初始化完后，[BeanPostProcessor](#5-注册拦截bean创建的bean处理器-beanpostprocessor)专门处理ifc的字段  
+自动装配时忽略ifc类型的接口，通常配合beanFactory的addBeanPostProcessor一起使用。当bean初始化完后，[BeanPostProcessor](#5-注册拦截bean创建的bean处理器-beanpostprocessor)专门处理ifc的字段  
 如常用的如ServletContextAwareProcessor、EnvironmentAware、ApplicationContextAware等
 **registerScope(String scopeName, Scope scope);**  
 除单例和prototype之外有request、session等bean的生命周期定义都是由这个方法完成注册。通过Scope接口中的get方法获取bean
@@ -163,7 +163,7 @@ BeanDefinitionRegistryPostProcessor：针对[BeanDefinitionRegistry](#4-beandefi
     1. context有一个beanFactoryPostProcessors成员，在context初始化的时候可以往里面添加  
       <small>默认有LazyInitializationBeanFactoryPostProcessor:如果条件满足，则设置全部的bean为懒加载、PropertySourceOrderingPostProcessor:把defaultProperties配置文件的优先级降到最低，等</small>
     2. context持有beanFactory，在context初始化的时候会往beanFactory注册[BeanDefinition](#4-beandefinitionregistry)  
-      <small>默认注册的有[ConfigurationClassPostProcessor，会扫描所有、注册符合条件的baan](/解析spring是如何向beanFactory注册bean的)等其他  
+      <small>默认注册的有[ConfigurationClassPostProcessor，会扫描所有、注册符合条件的bean](/解析spring是如何向beanFactory注册bean的)等其他  
       具体可参考```AnnotationConfigUtils#registerAnnotationConfigProcessors```</small>
   * 调用的顺序
     1. context里面的beanFactoryPostProcessors成员，如果是```BeanDefinitionRegistryPostProcessor```类型，则优先调用，优先级是最高的
