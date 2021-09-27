@@ -92,7 +92,7 @@ getBeanDefinition|getBeanDefinitionNames等方法
 **registerBeanDefinition**:BeanDefinition是包含了bean的所有信息，bean的名称、bean的class、scope、isLazy、isPrimary、bean的属性和bean的依赖关系等  
 beanFactory获取一个bean时，除非bean已经存在，否则会通过beanDefinition自动创建，没有beanDefinition就会报错，所以beanDefinition是一个很重要的存在  
 BeanDefinition包含了class的各种信息如注解的信息、class的资源路径等，但是不会初始化class，也就是说不会加载class到jvm中，主要通过ASM字节码读取器来解析class字节码的内容  
-> ASM解析class字节码默认实现类```CachingMetadataReaderFactoryPostProcessor#register```  
+> ASM解析class字节码默认实现类`SimpleMetadataReaderFactory`，由`SharedMetadataReaderFactoryContextInitializer`在[spring启动阶段的](/springBoot容器启动流程)中的`context#initialize`注册  
 > beanFactory通过调用[BeanFactoryPostProcessor](#4-调用beanfactorypostprocessors)主要的实现[ConfigurationClassPostProcessor](/解析spring是如何向beanFactory注册bean的)先扫描所有的class，通过AMS既可以读取class内容也不会加载class，然后符合条件的bean会包装成BeanDefinition注册到beanFactory中
    
 ## 5. AliasRegistry
@@ -107,11 +107,14 @@ getAliases|isAlias 只有这四个方法
 getBeansOfType|getBeanNamesForType|findAnnotationOnBean 等方法
    
 ## 7. **AutoWireCapableBeanFactory**
-> 可自动装配的factory，在[获取Bean](#1-beanfactory)的时候，如果bean还没有初始化。则在初始化的时候会启自动装配，都是通过[BeanPostProcessor实现的](#5-注册拦截bean创建的bean处理器-beanpostprocessor)  
-> 默认实现```AbstractAutowireCapableBeanFactory#createBean```ioc、aop等重要逻辑都嵌套在内  
+> 可自动装配的factory，在[获取Bean](#1-beanfactory)的时候，如果bean还没有创建则会[创建](/spring对bean实例化的流程#创建流程)  
+> 默认实现```AbstractAutowireCapableBeanFactory#createBean```ioc、aop等逻辑都嵌套在内  
 
-createBean|initializeBean|
-applyBeanPostProcessorsBeforeInitialization|applyBeanPostProcessorsBeforeInitialization等其他方法
+resolveDependency|resolveBeanByName|
+applyBeanPostProcessorsBeforeInitialization|applyBeanPostProcessorsBeforeInitialization等其他方法  
+
+**resolveDependency**  
+  在自动装配的时候会通过此方法获取可被装配的值
 
 ## 8. ConfigurableListableBeanFactory和ConfigurableBeanFactory  
 > 生产bean时、装配时、类型转化时、销毁bean、冻结等配置各种各样的组件供方便使用
@@ -173,21 +176,23 @@ BeanDefinitionRegistryPostProcessor：针对[BeanDefinitionRegistry](#4-beandefi
   
 ## 5. 注册拦截bean创建的bean处理器-BeanPostProcessor
 * BeanPostProcessor为最顶层的接口，共有5种类型不同作用的间接接口（包含自己）
-  1. **InstantiationAwareBeanPostProcessor**
-     可以拦截bean实例化之前（不包含factoryBean#getObject），如果返回不为空，则直接调用`BeanPostProcessor`的后置方法并直接返回，此时bean已创建完毕（很少用）  
-     postProcessAfterInstantiation： 返回值为Boolean类型，如果返回为false则不允许自动装配（很少用）  
-     postProcessProperties：最重要的实现`AutowiredAnnotationBeanPostProcessor`实现自动装配
+  1. **InstantiationAwareBeanPostProcessor**  
+     `postProcessBeforeInstantiation`: 可以拦截bean实例化之前（`不包含factoryBean#getObject`），如果返回不为空，则直接调用`BeanPostProcessor`的后置方法并直接返回，此时bean已创建完毕（很少用）  
+     `postProcessAfterInstantiation`： 返回值为Boolean类型，如果返回为false则不允许自动装配（很少用）  
+     `postProcessProperties`：<font color='red'>最重要的实现AutowiredAnnotationBeanPostProcessor实现自动装配</font>
      
   2. MergedBeanDefinitionPostProcessor(很少用)  
-     如果第一步没有拦截实例化、则会通过[beanDefinition](#4-beandefinitionregistry)准备实例化，实例化之前可以拦截beanDefinition做一些修改  
+     `postProcessMergedBeanDefinition`: 如果第1步没有拦截实例化、则会通过[beanDefinition](#4-beandefinitionregistry)准备实例化，实例化之前可以拦截beanDefinition做一些修改  
      
   3. **BeanPostProcessor**  
-     可以拦截(bean实例化)之后和(初始化方法)之后：如各种Aware的处理，以及@PostConstruct方法的调用等
+     `postProcessBeforeInitialization`: bean实例化之后  
+     `postProcessAfterInitialization`: bean自动装配且调用完初始化方法之后  
+     如各种Aware的处理，以及@PostConstruct方法的调用等
      
   4. **SmartInstantiationAwareBeanPostProcessor**  
-     提供早期的引用：如果是单例，并且是循环引用的情况下，最重要的实现`InfrastructureAdvisorAutoProxyCreator`实现事务aop拦截，且可以循环引用
-     predictBeanType：Predict the type of the bean to be eventually returned from this（返回可以为null）  
-     determineCandidateConstructors：Determine the candidate constructors to use for the given bean.(返回可以为null)
+     `getEarlyBeanReference`: <font color='red'>提供早期的引用：如果是单例，并且是循环引用的情况下，最重要的实现InfrastructureAdvisorAutoProxyCreator实现事务aop拦截，且可以循环引用</font>  
+     `predictBeanType`：Predict the type of the bean to be eventually returned from this（返回可以为null）  
+     `determineCandidateConstructors`：Determine the candidate constructors to use for the given bean.(返回可以为null)
 
   5. DestructionAwareBeanPostProcessor  
     bean在销毁时会调用
@@ -212,7 +217,7 @@ BeanDefinitionRegistryPostProcessor：针对[BeanDefinitionRegistry](#4-beandefi
 在[spring启动流程中]({{ "/springBoot容器启动流程" | relative_url }})通过spring-spi方式获取bean来事件广播，如果某些bean非spi配置的方式，而是以注解形式配置的，则广播不了  
 所以在此阶段通过beanFactory获取以注解形式存在的listener，并把之前已广播的事件再次广播（伪事件，因为已经过了那个阶段了）
 
-## 10. 实例化所有bean
+## 10. [实例化所有bean](/spring对bean实例化的流程)
 实例化之前，优先实例化LoadTimeWeaverAware类型的bean(增加AOP，通过修改字节码实现AOP)  
 * 实例化notLazyBean、singletonBean、如果为factoryBean，必须实现```SmartFactoryBean```接口且方法```isEagerInit```返回true才可以实例化  
 > notLazy And singletons 的bean是从哪里来的呢？  
