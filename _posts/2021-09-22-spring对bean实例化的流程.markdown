@@ -115,4 +115,4 @@ spring对非单例的循环引用会直接报错```throw new BeanCurrentlyInCrea
 未提前实例化的bean则通过`beanDefinition`获取`BeanWrapper`  
 `beanDefinition`为class定义的各种信息，`beanWrapper`为实例化的包装，包含一个实例的各种信息  
 要考虑到factoryBean有可能已经初始化过（[在根据beanName获取class的过程中](#通过beanname获取class流程)）,所以优先从缓存`factoryBeanInstanceCache`取对应的beanWrapper，没有则会创建  
-beanWrapper流程会解析beanDefinition是否可以通过无参构造进行构造，否则只能进行有参构造
+beanWrapper流程会通过beanDefinition解析是否可以通过无参构造进行构造，否则只能进行有参构造
