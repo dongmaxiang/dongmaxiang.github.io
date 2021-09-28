@@ -191,7 +191,7 @@ BeanDefinitionRegistryPostProcessor：针对[BeanDefinitionRegistry](#4-beandefi
      
   4. **SmartInstantiationAwareBeanPostProcessor**  
      `getEarlyBeanReference`: <font color='red'>提供早期的引用：如果是单例，并且是循环引用的情况下，最重要的实现InfrastructureAdvisorAutoProxyCreator实现事务aop拦截，且可以循环引用</font>  
-     `predictBeanType`：Predict the type of the bean to be eventually returned from this（返回可以为null）  
+     `predictBeanType`：通过beanName获取class的时候，可以重写此方法，返回不一样的class（返回可以为null）  
      `determineCandidateConstructors`：Determine the candidate constructors to use for the given bean.(返回可以为null)
 
   5. DestructionAwareBeanPostProcessor  
