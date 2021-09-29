@@ -19,7 +19,7 @@ tags: [spring,源码]
 ## 1. **InstantiationAwareBeanPostProcessor**
 
 * postProcessBeforeInstantiation  
-优先级最高，可以拦截bean实例化之前（`不包含factoryBean#getObject`），如果返回不为空，则直接调用`BeanPostProcessor`的后置方法并直接返回，此时bean已创建完毕（很少用）
+最先调用，可以拦截bean实例化之前（`不包含factoryBean#getObject`），如果返回不为空，则直接调用`BeanPostProcessor`的后置方法并直接返回，此时bean已创建完毕（很少用）
 
 * postProcessAfterInstantiation  
 在`postProcessMergedBeanDefinition`之后，返回值为Boolean类型，如果返回为false则不允许自动装配（很少用）
@@ -52,8 +52,7 @@ tags: [spring,源码]
 
 * postProcessAfterInitialization  
 在`postProcessBeforeInitialization`和初始化方法调用完之后  
-如各种Aware的处理，以及  
-PostConstruct方法的调用等
+如各种Aware的处理，以及`@PostConstruct`方法的调用等
 
 ---
 ---
@@ -74,3 +73,6 @@ Determine the candidate constructors to use for the given bean.(返回可以为n
 
 ## 5. DestructionAwareBeanPostProcessor
 bean在销毁时会调用
+
+
+# 鸟瞰调用的顺序
