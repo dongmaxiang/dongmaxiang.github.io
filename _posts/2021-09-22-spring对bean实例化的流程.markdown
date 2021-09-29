@@ -7,13 +7,13 @@ categories: [java,spring]
 tags: [spring,源码]
 ---
 
-获取一个bean时`AbstractBeanFactory#doGetBean`，除非bean已经存在，[否则会通过beanDefinition自动创建](/springBeanFactory流程解析#4-beandefinitionregistry)  
+获取一个bean时`AbstractBeanFactory#doGetBean`，除非bean已经存在，否则会通过beanDefinition自动创建  
 
-*创建时，如果没有beanDefinition就会报错，所以beanDefinition是一个很重要的存在*
+创建时，[如果没有beanDefinition就会报错，所以beanDefinition是一个很重要的存在](/springBeanFactory流程解析#4-beandefinitionregistry)
 
-**创建流程很复杂，必须要先了解bean的各种后置处理器[`BeanPostProcessor`](/springBeanFactory流程解析#5-注册拦截bean创建的bean处理器-beanpostprocessor)**  
+**创建流程很复杂，必须要先了解bean的各种后置处理器[`BeanPostProcessor`](/beanPostProcessor的调用流程及各种实现)**  
 
-spring底层通过name获取对应的bean，如果是根据类型，那么他会先根据类型先获取name，然后根据name在获取bean  
+spring获取bean时,底层是通过beanName获取的，如果是根据类型，那么他会先根据类型先获取name，然后根据name在获取bean  
 > beanName可以自定义，如果非自定义默认则是classSimpleName，且第一个字母小写  
 > FactoryBean类型的beanName也是同上,如果要获取FactoryBean类型的实例话，则beanName要以"&"为前缀。否则获取的就是factoryBean对应的实际bean
 
@@ -25,7 +25,7 @@ spring底层通过name获取对应的bean，如果是根据类型，那么他会
 那么咱们只需要关注如何根据beanName获取到对应class，以及如何根据class获取到对应的beanNames就行  
 
 ### 通过beanName获取class流程  
-1. 从已初始化的单例bean`singletonObjects`中获取(不允许早期初始化-非循环依赖方式获取)，没有就返回null，有就用返回实例对应的class  
+1. 从已初始化的单例bean`singletonObjects`中获取(不允许早期初始化-非循环依赖的方式获取)，没有就返回null，有就用返回实例对应的class  
    > 如果是`FactoryBean`则使用`Factory#getObjectType`，否则用`obj.getClass()`直接返回
 
 2. 如果上一步未满足，并且本地不包含beanDefinition，则尝试从[parentBeanFactory中获取](#通过beanname获取class流程)，否则执行下一步  
@@ -36,7 +36,7 @@ spring底层通过name获取对应的bean，如果是根据类型，那么他会
   > 因为有可能目标类将要被代理，在创建beanDefinition的时候就做了手脚,比如说`ScopedProxyUtils#createScopedProxy`：bean的作用域通过代理实现  
 
 5. [获取beanDefinition对应的class](#通过rootbeandefinition获取真实的class)  
-最后通过[`SmartInstantiationAwareBeanPostProcessor#predictBeanType`](/springBeanFactory流程解析#5-注册拦截bean创建的bean处理器-beanpostprocessor)返回对应的beanType
+最后通过[`SmartInstantiationAwareBeanPostProcessor#predictBeanType`](/beanPostProcessor的调用流程及各种实现#4-smartinstantiationawarebeanpostprocessor)返回对应的beanType
 
 6. 执行factoryBean的转换  
   如果参数beanName是以"&"为前缀，代表要获取FactoryBean类型的class，如果上一步获取到的class不是FactoryBean类型，则返回null  
@@ -58,6 +58,9 @@ spring底层通过name获取对应的bean，如果是根据类型，那么他会
    * 获取到class之后调用`isInstance`  
        如果返回true则会把当前的beanName添加到list里面，最后一并返回  
        如果为false，并且当前的beanName的类型为FactoryBean类型则会拼接'&'前缀作为beanName从新判断  
+
+---
+---
 
 ## 2 根据beanName优先获取单列的bean
 
@@ -92,7 +95,6 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
     public Object getSingleton(String beanName) {
         return getSingleton(beanName, true);
     }
-
     protected Object getSingleton(String beanName, boolean allowEarlyReference) {
         Object singletonObject = this.singletonObjects.get(beanName);// 一级缓存，所有已初始化完的单例bean都在这里
         if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {// 当前bean正在创建中
@@ -131,6 +133,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 3. 没有缓存则调用`getObject`，把当前beanName存放在一个set中，标志正在创建中,然后调用`BeanPostProcessor#postProcessAfterInitialization`此时bean已创建完成（并不会自动装配）,完事放入缓存中，并从set中移除  
   > 如果在`postProcessAfterInitialization`期间又引用了当前的bean的话，则会重新调用`getObject`返回一个新的对象
 
+---
+---
+
 ## 3. 获取不到bean则创建
 spring对非单例的循环引用会直接报错```throw new BeanCurrentlyInCreationException(beanName)```  
 > 非单例的bean创建之前都会把beanName放入```prototypesCurrentlyInCreation```中，创建过程中如果存在一样的bean名称，视为循环引用，直接报错，没有循环引用最后创建完则从中移除
@@ -138,6 +143,8 @@ spring对非单例的循环引用会直接报错```throw new BeanCurrentlyInCrea
 创建bean，必须需要beanDefinition，没有则`throw new NoSuchBeanDefinitionException`  
    > beanDefinition的注册  
    > 在[beanFactory初始化时](/springBeanFactory流程解析#4-beandefinitionregistry)，通过调用[ConfigurationClassPostProcessor](/解析spring是如何向beanFactory注册bean的)向beanFactory中注册符合条件的beanDefinition  
+
+---
 
 ### 创建bean时的前期流程
 1. 如果parentBeanFactory不为空，且当前的beanFactory不包含beanDefinition则交由parentBeanFactory处理，[从头开始](#把beanname转换为为标准的beanname)  
@@ -160,12 +167,22 @@ spring对非单例的循环引用会直接报错```throw new BeanCurrentlyInCrea
 如果存在tempClassLoader，则用tempClassLoader加载class，不管用什么，都不会初始化class，除非已经初始化过
 >  一旦class已初始化，并且LoadTimeWeaver未加载，那么通过字节码织入的aop对当前的class将会失效
 
+---
+
 ### 通过`InstantiationAwareBeanPostProcessor`提前实例化  
-此类为[`BeanPostProcessor`](/springBeanFactory流程解析#5-注册拦截bean创建的bean处理器-beanpostprocessor)的子类  
+此类为[`BeanPostProcessor`](/beanPostProcessor的调用流程及各种实现#1-instantiationawarebeanpostprocessor)的子类  
 可以拦截bean实例化之前（`不包含factoryBean#getObject`），如果返回不为空，则直接调用`BeanPostProcessor`的后置方法并直接返回，此时bean已创建完毕（很少用）  
+
+---
 
 ### 创建beanWrapper
 未提前实例化的bean则通过`beanDefinition`获取`BeanWrapper`  
 `beanDefinition`为class定义的各种信息，`beanWrapper`为实例化的包装，包含一个实例的各种信息  
-要考虑到factoryBean有可能已经初始化过（[在根据beanName获取class的过程中](#通过beanname获取class流程)）,所以优先从缓存<span id='缓存取对应的beanWrapper'>/'`factoryBeanInstanceCache`取对应的beanWrapper，没有则会创建  
+要考虑到factoryBean有可能已经初始化过[在根据beanName获取class的过程中](#通过beanname获取class流程)）,所以优先从缓存<span id='缓存取对应的beanWrapper'>/'`factoryBeanInstanceCache`取对应的beanWrapper，没有则会创建  
 beanWrapper流程会通过beanDefinition解析是否可以通过无参构造进行构造，否则只能进行有参构造
+
+---
+
+### 通过`MergedBeanDefinitionPostProcessor`配置beanDefinition或提取信息
+此类为[`BeanPostProcessor`](/beanPostProcessor的调用流程及各种实现#2-mergedbeandefinitionpostprocessor)的子类  
+比如说自动装配`@Autowired、@Resource`在这个阶段提取对应的字段或方法并缓存，然后再`postProcessProperties`阶段进行自动装配操作
