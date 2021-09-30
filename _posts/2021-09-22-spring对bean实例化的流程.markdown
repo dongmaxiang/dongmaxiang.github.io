@@ -206,7 +206,7 @@ beanWrapper流程会通过beanDefinition解析是否可以通过无参构造进�
 
 ---
 
-### 自动装配和初始化方法调用  
+### 自动装配和初始化方法调用-aop和ioc  
 自动装配、初始化方法调用等都是通过beanPostProcessor来实现的  
 执行[beanPostProcessor](/beanPostProcessor的调用流程及各种实现#4-postprocessafterinstantiation)第四步后面的流程  
 至此bean实例化、初始化完毕。如果是单例的bean则会放到`singletonObjects`中，缓存起来

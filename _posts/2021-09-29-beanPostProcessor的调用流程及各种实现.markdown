@@ -96,7 +96,8 @@ Determine the candidate constructors to use for the given bean.(返回可以为n
 
 如果此方法如果返回false，则不允许自动装配了，换句话说就不会执行第5步了
 如果返回true，则要自动装配    
-通过`beanDefinition#getResolvedAutowireMode`返回值，可选择的执行spring内置的`autowireByType`或者`autowireByName`    
+通过`beanDefinition#getResolvedAutowireMode`返回值，可选择的执行spring内置的`autowireByType`或者`autowireByName`  
+> 装配的属性必须有set方法，并且只装配在beanFactory中存在的bean，不存在的并不会报错  
 
 ## 5. postProcessProperties或postProcessPropertyValues
 > InstantiationAwareBeanPostProcessor
