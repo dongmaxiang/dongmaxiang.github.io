@@ -101,9 +101,13 @@ div > pre {
     border: 0;
   }
 } //.highlight
-/*
+
+.rouge-table {
+  margin-top: 17px
+}
 
 code {
+  position: relative;
 
   &:before {
     display: block;
@@ -133,7 +137,6 @@ code {
     box-shadow: 20px 0 #fdbc40,40px 0 #35cd4b;
   }
 }
-*/
 
 code {
   -webkit-hyphens: none;
