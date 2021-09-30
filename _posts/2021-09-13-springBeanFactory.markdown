@@ -65,6 +65,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader i
 
 我们具体分析下refresh当中的重要操作步骤，分析之前，我们先了解beanFactory的作用以及实现都有哪些
 
+---
+---
+
 # beanFactory作用
 实现的类结构，如图![spring-beanFactory](/assets/images/posts/2021/spring-beanFactory.png)
 
@@ -134,6 +137,9 @@ setTypeConverter|setConversionService等其他方法
 除单例和prototype之外有request、session等bean的生命周期定义都是由这个方法完成注册。通过Scope接口中的get方法获取bean
 
 ## 9. DefaultListableBeanFactory为以上接口的默认实现类
+
+---
+---
 
 # beanFactory大体工作流程
 
@@ -211,4 +217,4 @@ BeanDefinitionRegistryPostProcessor：针对[BeanDefinitionRegistry](#4-beandefi
 3:把bean的信息注册到ManagementFactory（java监控工厂）
 
 
-<big>**至此beanFactory流程解析完成**</big>
+<big>**至此beanFactory流程解析完成**</big>后续继续[分析bean实例化,ioc,aop](/spring对bean实例化的流程)
