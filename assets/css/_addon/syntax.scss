@@ -102,11 +102,11 @@ div > pre {
   }
 } //.highlight
 
-.rouge-table {
-  margin-top: 17px
-}
+//.rouge-table {
+//  margin-top: 17px
+//}
 
-code {
+/*code {
   position: relative;
 
   &:before {
@@ -136,7 +136,7 @@ code {
     -webkit-box-shadow: 20px 0 #fdbc40,40px 0 #35cd4b;
     box-shadow: 20px 0 #fdbc40,40px 0 #35cd4b;
   }
-}
+}*/
 
 code {
   -webkit-hyphens: none;
