@@ -92,9 +92,10 @@ getParentBeanFactory|containsLocalBean 只有两个方法
 registerBeanDefinition|removeBeanDefinition|
 getBeanDefinition|getBeanDefinitionNames等方法  
 
-**registerBeanDefinition**:BeanDefinition是包含了bean的所有信息，bean的名称、bean的class、scope、isLazy、isPrimary、bean的属性和bean的依赖关系等  
-beanFactory获取一个bean时，除非bean已经存在，否则会通过beanDefinition自动创建，没有beanDefinition就会报错，所以beanDefinition是一个很重要的存在  
-BeanDefinition包含了class的各种信息如注解的信息、class的资源路径等，但是不会初始化class，也就是说不会加载class到jvm中，主要通过ASM字节码读取器来解析class字节码的内容  
+* registerBeanDefinition  
+  BeanDefinition是包含了bean的所有信息，bean的名称、bean的class、scope、isLazy、isPrimary、bean的属性和bean的依赖关系等  
+  beanFactory获取一个bean时，除非bean已经存在，否则会通过beanDefinition自动创建，没有beanDefinition就会报错，所以beanDefinition是一个很重要的存在  
+  BeanDefinition包含了class的各种信息如注解的信息、class的资源路径等，但是不会初始化class，也就是说不会加载class到jvm中，主要通过ASM字节码读取器来解析class字节码的内容  
 > ASM解析class字节码默认实现类`SimpleMetadataReaderFactory`，由`SharedMetadataReaderFactoryContextInitializer`在spring启动阶段中的`context#initialize`注册  
 > beanFactory通过调用[BeanFactoryPostProcessor](#4-调用beanfactorypostprocessors)主要的实现[ConfigurationClassPostProcessor](/解析spring是如何向beanFactory注册bean的)先扫描所有的class，通过AMS既可以读取class内容也不会加载class，然后符合条件的bean会包装成BeanDefinition注册到beanFactory中
    
@@ -116,7 +117,7 @@ getBeansOfType|getBeanNamesForType|findAnnotationOnBean 等方法
 resolveDependency|resolveBeanByName|
 applyBeanPostProcessorsBeforeInitialization|applyBeanPostProcessorsBeforeInitialization等其他方法  
 
-**resolveDependency**  
+* resolveDependency    
   在自动装配的时候会通过此方法获取可被装配的值
 
 ## 8. ConfigurableListableBeanFactory和ConfigurableBeanFactory  
@@ -128,15 +129,17 @@ freezeConfiguration|isConfigurationFrozen|
 preInstantiateSingletons|destroySingletons|
 setTypeConverter|setConversionService等其他方法  
 
-**registerResolvableDependency(Class<?> dependencyType, @Nullable Object autowiredValue);**  
-  注册一个bean，其他依赖此类型的，可以直接用，autowiredValue不会放到bean工厂中，只会为其他类提供依赖  
-**ignoreDependencyInterface(Class<?> ifc);**  
-自动装配时忽略ifc类型的接口，通常配合beanFactory的addBeanPostProcessor一起使用。当bean初始化完后，[BeanPostProcessor](#5-注册拦截bean创建的bean处理器-beanpostprocessor)专门处理ifc的字段  
-如常用的如ServletContextAwareProcessor、EnvironmentAware、ApplicationContextAware等
-**registerScope(String scopeName, Scope scope);**  
-除单例和prototype之外有request、session等bean的生命周期定义都是由这个方法完成注册。通过Scope接口中的get方法获取bean
+* registerResolvableDependency    
+  注册一个bean，其他依赖此类型的，可以直接用，autowiredValue不会放到bean工厂中，只会为其他类提供依赖
+  
+* ignoreDependencyInterface    
+  自动装配时忽略某个类型，通常配合beanFactory的addBeanPostProcessor一起使用。当bean初始化完后，[BeanPostProcessor](#5-注册拦截bean创建的bean处理器-beanpostprocessor)专门处理set忽略掉的字段    
+  如常用的如ServletContextAwareProcessor、EnvironmentAware、ApplicationContextAware等
+  
+* registerScope    
+  除单例和prototype之外有request、session等bean的生命周期定义都是由这个方法完成注册。通过Scope接口中的get方法获取bean
 
-## 9. DefaultListableBeanFactory为以上接口的默认实现类
+## 9. DefaultListableBeanFactory为以上全部接口的默认实现
 
 ---
 ---

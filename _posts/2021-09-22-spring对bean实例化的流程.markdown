@@ -45,7 +45,7 @@ spring获取bean时,底层是通过beanName获取的，如果是根据类型，�
 6. 执行factoryBean的转换  
   如果参数beanName是以"&"为前缀，代表要获取FactoryBean类型的class，如果上一步获取到的class不是FactoryBean类型，则返回null  
   如果参数beanName不是以"&"为前缀，代表要获取真实bean的类型，如果上一步获取到的不是FactoryBean类型，则直接返回，如果是FactoryBean类型，优先根据泛型获取对应的type，如果获取失败则要进行初始化FactoryBean,因为一会要调用`Factory#getObjectType`来返回真实的类型  
-  创建流程请参考[`AbstractAutowireCapableBeanFactory#createBeanInstance`](#创建beanwrapper)(包含构造注入流程)，完事会返回一个BeanWrapper，如果factoryBean本身是单例的话则会放入缓存中`factoryBeanInstanceCache`，[在获取bean的时候，保证不能有二次初始化](#缓存取对应的beanwrapper)
+  创建流程请参考[`AbstractAutowireCapableBeanFactory#createBeanInstance`](#创建beanwrapper)(包含构造注入流程)，完事会返回一个BeanWrapper，如果factoryBean本身是单例的话则会放入缓存中`factoryBeanInstanceCache`，[在获取bean的时候，保证不能有二次初始化](#缓存取对应的beanWrapper)
   > beanDefinition为class定义的各种信息，beanWrapper为实例化之后的各种信息  
 
 ---
@@ -193,10 +193,25 @@ spring对非单例的循环引用会直接报错```throw new BeanCurrentlyInCrea
 ---
 
 ### 创建beanWrapper
-未提前实例化的bean则通过`beanDefinition`获取`BeanWrapper`  
-`beanDefinition`为class定义的各种信息，`beanWrapper`为实例化的包装，包含一个实例的各种信息  
-要考虑到factoryBean有可能已经初始化过[在根据beanName获取class的过程中](#通过beanname获取class流程)）,所以优先从缓存<span id='缓存取对应的beanWrapper'>/'`factoryBeanInstanceCache`取对应的beanWrapper，没有则会创建  
-beanWrapper流程会通过beanDefinition解析是否可以通过无参构造进行构造，否则只能进行有参构造
+> `beanDefinition`为class定义的各种信息，`beanWrapper`为实例化的包装，包含一个实例的各种信息  
+
+通过`beanDefinition`创建`BeanWrapper`  
+要考虑到factoryBean有可能已经初始化过[在根据beanName获取class的过程中](#通过beanname获取class流程)）,所以优先从缓存<span id='缓存取对应的beanWrapper'/>`factoryBeanInstanceCache`获取factoryBean对应的beanWrapper，没有则会创建  
+
+创建beanWrapper其实就是创建bean的实例，创建流程如下  
+1. 在beanDefinition中如果提供`instanceSupplier`则直接调用并返回  
+   如我们常用的注解`@EnableConfigurationProperties`,instanceSupplier就是由他提供实现`ConfigurationPropertiesValueObjectBeanDefinition`  
+
+2. 在beanDefinition中如果提供`FactoryMethodName`则需要调用此方法获取实例  
+   该方法如果有参数，则会从从beanDefinition和beanFactory中获取，找不到就报错，最终调用factoryMethod并返回  
+
+3. 在beanDefinition中如果有缓存则直接用缓存实例化-如非单例的bean需要多次实例化
+   缓存的是构造方法，如果缓存不为空则直接使用构造方法，该方法如果有参数，则会从从beanDefinition和beanFactory中获取，找不到就报错  
+
+4. 以上步骤都没有实例化则优先通过无参构造初始化，否则使用有参构造  
+   有参构造的参数会从beanDefinition和beanFactory中寻找对应的参数，找不到就报错，最终调用构造方法并返回
+
+> @Lookup注解的原理就是在此实例化bean的时候创建动态代理，具体可参考`CglibSubclassingInstantiationStrategy#instantiateWithMethodInjection`
 
 ---
 
