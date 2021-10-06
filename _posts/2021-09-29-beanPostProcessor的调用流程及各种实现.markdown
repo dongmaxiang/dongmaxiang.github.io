@@ -123,3 +123,7 @@ spring实例化完bean之后调用`populateBean`进行自动装配
 
 postProcessBeforeDestruction
 bean在销毁的时候会调用，比如说当`spring#close`或者手动destroy时
+
+# 总结
+BeanPostProcessor为bean的后置处理器，共有5种不同的后置处理类型，每种后置类型有n多个方法  
+IOC`AutowiredAnnotationBeanPostProcessor`和AOP`AbstractAutoProxyCreator`都是通过后置处理完成的实现

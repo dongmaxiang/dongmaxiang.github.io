@@ -133,7 +133,7 @@ setTypeConverter|setConversionService等其他方法
   注册一个bean，其他依赖此类型的，可以直接用，autowiredValue不会放到bean工厂中，只会为其他类提供依赖
   
 * ignoreDependencyInterface    
-  自动装配时忽略某个类型，通常配合beanFactory的addBeanPostProcessor一起使用。当bean初始化完后，[BeanPostProcessor](#5-注册拦截bean创建的bean处理器-beanpostprocessor)专门处理set忽略掉的字段    
+  自动装配时忽略某个类型，通常配合beanFactory的addBeanPostProcessor一起使用。当bean初始化完后，[BeanPostProcessor](#5-注册拦截bean创建的bean处理器-beanpostprocessor)专门set忽略的字段    
   如常用的如ServletContextAwareProcessor、EnvironmentAware、ApplicationContextAware等
   
 * registerScope    
