@@ -1,0 +1,23 @@
+---
+layout: post
+title: java实例化的几种方式
+permalink: /java实例化的几种方式
+date: 2021-10-08 10:29:55.000000000 +08:00
+categories: [java,基础]
+tags: [java]
+---
+
+1. 直接new  
+  调用了构造
+   
+2. 通过反射  
+  调用了构造
+   
+3. clone  
+  没有调用构造,但必须实现`Cloneable`接口，java通过native方法实现
+   
+4. 反序列化  
+  没有调用构造，通过调用`MethodAccessorGenerator#generateSerializationConstructor`生成一个新的构造对象，该构造对象不会调用构造方法  
+   
+5. 通过Unsafe类的allocateInstance()方法  
+   没有调用构造，只分配内存空间
