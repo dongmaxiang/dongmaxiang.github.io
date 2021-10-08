@@ -1,6 +1,6 @@
 ---
 layout: post
-title: spring对bean实例化的流程-Ioc和Aop的底层实现
+title: spring对bean实例化-初始化-流程
 permalink: /spring对bean实例化的流程
 date: 2021-09-22 13:57:47.000000000 +08:00
 categories: [java,spring]
@@ -203,13 +203,13 @@ spring对非单例的循环引用会直接报错```throw new BeanCurrentlyInCrea
    如我们常用的注解`@EnableConfigurationProperties`,instanceSupplier就是由他提供实现`ConfigurationPropertiesValueObjectBeanDefinition`  
 
 2. 在beanDefinition中如果提供`FactoryMethodName`则需要调用此方法获取实例  
-   该方法如果有参数，则会从从beanDefinition和beanFactory中获取，找不到就报错，最终调用factoryMethod并返回  
+   如常用的注解`@Bean`，该方法如果有参数，则会从从beanDefinition和beanFactory中获取，找不到就报错，最终调用factoryMethod并返回  
 
-3. 在beanDefinition中如果有缓存则直接用缓存实例化-如非单例的bean需要多次实例化
-   缓存的是构造方法，如果缓存不为空则直接使用构造方法，该方法如果有参数，则会从从beanDefinition和beanFactory中获取，找不到就报错  
+3. 在beanDefinition中如果有缓存则直接用缓存实例化-非单例的bean可能会多次实例化  
+   缓存的是构造方法，有其他步骤给给缓存赋值，如果缓存不为空则直接使用，如果有参数，则会从从beanDefinition和beanFactory中获取  
 
-4. 以上步骤都没有实例化则优先通过无参构造初始化，否则使用有参构造  
-   有参构造的参数会从beanDefinition和beanFactory中寻找对应的参数，找不到就报错，最终调用构造方法并返回
+4. 以上步骤都没有实例化则获取所有的构造方法寻找能够实例化的constructor  
+   优先使用有@Autowire注解的构造，如果required=true，参数不满足则直接报错，否则尝试用其他的
 
 > @Lookup注解的原理就是在此实例化bean的时候创建动态代理，具体可参考`CglibSubclassingInstantiationStrategy#instantiateWithMethodInjection`
 
@@ -225,3 +225,7 @@ spring对非单例的循环引用会直接报错```throw new BeanCurrentlyInCrea
 自动装配、初始化方法调用等都是通过beanPostProcessor来实现的  
 执行[beanPostProcessor](/beanPostProcessor的调用流程及各种实现#4-postprocessafterinstantiation)第四步后面的流程  
 至此bean实例化、初始化完毕。如果是单例的bean则会放到`singletonObjects`中，缓存起来
+
+## 总结
+spring在获取bean的时候如果没有就会自动创建，如果是单例的bean就会缓存起来，非单例的每次根据scope作用域创建  
+spring最著名的莫非IOC和AOP了，在创建bean的时候通过[beanPostProcessor](/beanPostProcessor的调用流程及各种实现)完成IOC和AOP等逻辑  
