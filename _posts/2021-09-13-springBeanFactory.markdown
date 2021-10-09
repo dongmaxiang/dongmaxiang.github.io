@@ -34,7 +34,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader i
 
                 registerListeners();// 注册以注解形式存在的listener，并且广播之前已广播的事件
 
-                finishBeanFactoryInitialization(beanFactory); // 加载LoadTimeWeaverAware(增加AOP，通过修改字节码实现AOP)，冻结配置，初始化所有的bean(单例、notLazy)
+                finishBeanFactoryInitialization(beanFactory); // 加载LoadTimeWeaverAware(增强AOP，通过修改字节码实现AOP，class已加载过的话则不起作用)，冻结配置，初始化所有的bean(单例、notLazy)
 
                 /* 最后一步: 发布相对应的事件
                     1:获取所有Lifecycle类型的bean，如果是SmartLifecycle的类型并且isAutoStartup为true，则调用start方法
@@ -206,7 +206,7 @@ BeanDefinitionRegistryPostProcessor：针对[BeanDefinitionRegistry](#4-beandefi
 所以在此阶段通过beanFactory获取以注解形式存在的listener，并把之前已广播的事件再次广播（伪事件，因为已经过了那个阶段了）
 
 ## 10. [实例化所有bean](/spring对bean实例化的流程)
-实例化之前，优先实例化LoadTimeWeaverAware类型的bean(增加AOP，通过修改字节码实现AOP)  
+实例化之前，优先实例化LoadTimeWeaverAware类型的bean(增强AOP，通过修改字节码实现AOP，class已加载过的话则不起作用，但是在这个阶段class基本上都已经被加载过)  
 * 实例化notLazyBean、singletonBean、如果为factoryBean，必须实现```SmartFactoryBean```接口且方法```isEagerInit```返回true才可以实例化  
 > notLazy And singletons 的bean是从哪里来的呢？  
 都是通过[BeanDefinitionRegistry](#4-beandefinitionregistry)注册的bean

@@ -117,7 +117,7 @@ spring实例化完bean之后调用`populateBean`进行自动装配
 > BeanPostProcessor
 
 调用此方法前优先会调用`InitializingBean`接口的bean`afterPropertiesSet`  
-可以替换或set对应的bean，如aop拦截返回代理的bean`AbstractAutoProxyCreator`
+可以替换或set对应的bean，如aop拦截返回代理的bean[`AbstractAutoProxyCreator`](/spring事务和aop的原理)
 
 ---
 
