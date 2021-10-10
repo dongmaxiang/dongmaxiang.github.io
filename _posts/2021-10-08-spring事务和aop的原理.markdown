@@ -4,7 +4,7 @@ title: spring事务和aop的原理
 permalink: /spring事务和aop的原理
 date: 2021-10-08 15:41:10.000000000 +08:00
 categories: [java,spring]
-tags: [spring,事务]
+tags: [spring,动态代理]
 ---
 
 # AOP
@@ -230,7 +230,7 @@ public class DefaultTransactionAttribute extends DefaultTransactionDefinition im
 通过分析事务的核心代码`TransactionAspectSupport#invokeWithinTransaction`(开启、回退、隔离级别等)，我们发现注解的配置由`TransactionAttributeSource`提供  
 我们只需要重写`TransactionAttributeSource`，并应用即可
 
-但是要注意这种方式只支持Proxy方式的事务，如果是基于字节码那么修改源码了（字节码的切入不受spring管控）
+<font color='red'>但是要注意这种方式只支持Proxy方式的事务，如果是基于字节码那么修改源码了（字节码的切入不受spring管控）</font>
 
 ## 代码
 

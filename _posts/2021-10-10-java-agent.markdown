@@ -12,7 +12,7 @@ tags: [jvm]
 
 java-agent可以理解为是一个代理程序，非主程序，代理程序可以做的事情就很多了，取决于你想写什么逻辑  
 比如说[Alibaba开源的Java诊断工具](https://arthas.aliyun.com/doc/)  
-也可以动态的替换字节码，实现代码热部署的效果  
+也可以动态的替换字节码，实现代码热更新的效果  
 
 ---
 ---
@@ -101,12 +101,12 @@ Can-Retransform-Classes: true
 ---
 ---
 
-# agent实现热部署
-* 获取到`Instrumentation`实例之后调用`redefineClasses(ClassDefinition definition)`重新定义class字节码实现热部署  
+# agent实现热更新
+* 获取到`Instrumentation`实例之后调用`redefineClasses(ClassDefinition definition)`重新定义class字节码实现热更新
+  热更新底层原理可[参考其他文章](https://www.cnblogs.com/zyl2016/p/13666945.html)
   > ClassDefinition包含了老的class和新的class字节码
 
 不是说class一旦加载之后就不能修改吗？为什么agent却可以啊  
 原来是部分不能修改，不能增删改字段成员和方法的signature，只能修改方法体的内容  
 如果觉得只能修改方法体太局限，[可以参考springRemoteRestart](/解决springRemoteRestart不起作用#重新启动)  
-为什么只能修改方法体呢？得了解class加载完之后的内存分布图就知道了  
-
+为什么只能修改方法体呢？[参考其他文章](https://www.cnblogs.com/zyl2016/p/13666945.html)
