@@ -107,6 +107,6 @@ Can-Retransform-Classes: true
 
 不是说class一旦加载之后就不能修改吗？为什么agent却可以啊  
 原来是部分不能修改，不能增删改字段成员和方法的signature，只能修改方法体的内容  
-如果觉得只能修改方法体太局限，[可以参考springRemoteRestart](/解决springRemoteRestart不起作用#重新启动)
+如果觉得只能修改方法体太局限，[可以参考springRemoteRestart](/解决springRemoteRestart不起作用#重新启动)  
 为什么只能修改方法体呢？得了解class加载完之后的内存分布图就知道了  
 
