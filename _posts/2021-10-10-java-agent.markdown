@@ -65,36 +65,36 @@ public interface Instrumentation {
 ## jar包代码编写  
 
 * java代码  
-```java
-public final class DynamicInstrumentationAgent {
-
-    private DynamicInstrumentationAgent() {
-    }
-
-    public static void premain(final String args, final Instrumentation inst) throws Exception {
-        ...
-        // 拿着inst可以干很多事情
-    }
-
-    public static void agentmain(final String args, final Instrumentation inst) throws Exception {
-        premain(args, inst);
-    }
-
-}
-```
+  ```java
+  public final class DynamicInstrumentationAgent {
+  
+      private DynamicInstrumentationAgent() {
+      }
+  
+      public static void premain(final String args, final Instrumentation inst) throws Exception {
+          ...
+          // 拿着inst可以干很多事情
+      }
+  
+      public static void agentmain(final String args, final Instrumentation inst) throws Exception {
+          premain(args, inst);
+      }
+  
+  }
+  ```
 
 * MANIFEST.MF  
-```manifest
+  ```manifest
+  
+  Manifest-Version: 1.0
+  Premain-Class: DynamicInstrumentationAgent
+  Agent-Class: DynamicInstrumentationAgent
+  Can-Redefine-Classes: true
+  Can-Retransform-Classes: true
+  
+  ```
 
-Manifest-Version: 1.0
-Premain-Class: DynamicInstrumentationAgent
-Agent-Class: DynamicInstrumentationAgent
-Can-Redefine-Classes: true
-Can-Retransform-Classes: true
-
-```
-
-* 打成jar包
+* 打成jar包  
 把java代码和MANIFEST.MF打成jar包，并把MANIFEST.MF放在META-INF目录下即可
 
 
