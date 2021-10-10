@@ -181,7 +181,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport imp
 > 2是配置起来复杂，需要在代码层面提前配置好切入的表达式和对应的逻辑，且要保证切入的class没有提前加载才行  
 
 1. 基于agent在class加载的时候进行动态的替换字节码  
-   [字节码增强](#/java-agent)技术-ASPECTJ     
+   [字节码增强](/java-agent)技术-ASPECTJ     
 
 2. 基于编译阶段做切入操作  
   [具体可google搜索class编译时做字节码切入](https://leon-wtf.github.io/springboot/2019/12/30/spring-aop-vs-aspectj/)
@@ -205,7 +205,7 @@ spring.xml: `<tx:annotation-driven/>`
 * 注解注册的代码  
   `TransactionManagementConfigurationSelector#selectImports`
 
-## 基于[字节码增强](#/java-agent)  
+## 基于[字节码增强](/java-agent)  
 字节码增强，spring兼容的不太好。因为字节码需要agent，并且需要class字节器转换器。基于字节码的切入，即使不开启事务的注解，也会生效，所以可以不用配置注解。    
 只要保证要切入的类在加载之前agent能正常运行且有class转换器`org.springframework.transaction.aspectj.AnnotationTransactionAspect`即可  
 
