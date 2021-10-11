@@ -29,6 +29,7 @@ java-agent可以理解为是一个代理程序，非主程序，代理程序可�
 2. 也可以在主程序运行过程中启动，通过jdk自带的方法`VirtualMachine#attach.loadAgent("你封装的agentJar包路径")`，jdk1.6之后才可以  
   jar包中的class方法signature必须为 `public static void agentmain(String agentArgs, Instrumentation inst)`
 
+Instrumentation简称JVMTI（JVM Tool Interface）  
 ```java
 public interface Instrumentation {
     // 添加class转换器，在class加载的时候可以修改class字节码
@@ -109,5 +110,8 @@ public interface Instrumentation {
 
 不是说class一旦加载之后就不能修改吗？为什么agent却可以啊  
 原来是部分不能修改，不能增删改字段成员和方法的signature，只能修改方法体的内容  
-如果觉得只能修改方法体太局限，[可以参考springRemoteRestart](/解决springRemoteRestart不起作用#重新启动)  
-为什么只能修改方法体呢？[参考其他文章](https://www.cnblogs.com/zyl2016/p/13666945.html)
+如果觉得只能修改方法体太局限，[可以参考快速集成springRemoteRestart](/解决springRemoteRestart不起作用#重新启动)  
+为什么只能修改方法体呢？[参考其他文章](https://www.cnblogs.com/zyl2016/p/13666945.html)  
+> 比如说如果对Class增加/修改/删除field，由于class加载后，对象实例化后，就会在heap上占据一片（连续）区域  
+> 动态修改区域，不可避免会遇到冲突（比如下一片区域已经被分配了）  
+> 所以这种方法目前只能支持修改方法体
