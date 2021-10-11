@@ -4,7 +4,7 @@ title: java-agent
 permalink: /java-agent
 date: 2021-10-10 17:43:40.000000000 +08:00
 categories: [java,jvm]
-tags: [jvm]
+tags: [jvm,热部署]
 ---
 
 # 简介
@@ -123,3 +123,20 @@ public interface Instrumentation {
 > 比如说如果对Class增加/修改/删除field，由于class加载后，对象实例化后，就会在heap上占据一片（连续）区域  
 > 动态修改区域，不可避免会遇到冲突（比如下一片区域已经被分配了）  
 > 所以这种方法目前只能支持修改方法体
+
+
+## 在运行时获取到`Instrumentation`实例
+```xml
+<dependency>
+  <groupId>de.invesdwin</groupId>
+  <artifactId>invesdwin-instrument</artifactId>
+  <version>1.0.14</version>
+</dependency>
+```
+使用方式如下  
+```java
+DynamicInstrumentationLoader.waitForInitialized();
+Instrumentation instrumentation = InstrumentationSavingAgent.getInstrumentation();
+```
+
+原理就是通过`VirtualMachine#attach`方法attach自己，然后把instrumentation变为自己的静态变量

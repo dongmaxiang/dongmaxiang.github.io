@@ -61,11 +61,28 @@ pin: true
 [dubbo日志链路追踪]()  
 
 ## 定义统一响应包装类
-[mvc对外提供统一响应包装]()  
+* [mvc对外提供统一响应包装](/mvc对外提供统一响应包装)  
+
 [强制后端的提示信息实现的in18国际化]()  
 
 ## 定义swagger通用接口文档
-[定义swagger通用接口文档]()  
+* [定义swagger通用接口文档](/定义swagger通用接口文档)
+我们用的swagger版本为
+  
+```xml
+
+<dependency>
+    <groupId>com.github.xiaoymin</groupId>
+    <artifactId>swagger-bootstrap-ui</artifactId>
+    <version>1.9.6</version>
+</dependency>
+
+```
+
+1. 由于swagger的分组在配置文件中不支持中文，所以我们给他改成中文  
+1. 由于我们统一了http最外层的响应包装，swagger是检测不出来的，所以我们要给他加上最外层的响应包装  
+1. 由于我们统一了枚举，swagger也是检测不出来的，所以我们要给他加上枚举的注释以及对应的value  
 
 ## 危险，集成热部署工具（线上禁止使用）
-[springDevTools+jdkInstruments实现热部署]()  
+* [springDevTools+jdkInstruments实现热部署](/解决springRemoteRestart不起作用#优化热部署-减少部署时间)  
+自己编写的简单热部署工具，不用运维、不用第三方庞大的插件。只需要有http服务的接口即可,非常简易

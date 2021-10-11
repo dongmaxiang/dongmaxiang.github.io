@@ -1,0 +1,295 @@
+---
+layout: post
+title: 定义swagger通用接口文档
+permalink: /定义swagger通用接口文档
+date: 2021-10-11 14:34:54.000000000 +08:00
+categories: [java,swagger]
+tags: [swagger]
+---
+
+我们用的swagger版本为
+```xml
+<dependency>
+    <groupId>io.springfox</groupId>
+    <artifactId>springfox-swagger2</artifactId>
+    <version>2.9.2</version>
+</dependency>
+
+<dependency>
+    <groupId>com.github.xiaoymin</groupId>
+    <artifactId>swagger-bootstrap-ui</artifactId>
+    <version>1.9.6</version>
+</dependency>
+
+<dependency>
+    <groupId>com.spring4all</groupId>
+    <artifactId>swagger-spring-boot-starter</artifactId>
+    <version>1.9.1.RELEASE</version>
+    <exclusions>
+        <exclusion>
+            <groupId>io.springfox</groupId>
+            <artifactId>springfox-swagger-ui</artifactId>
+        </exclusion>
+        <exclusion>
+            <groupId>io.swagger</groupId>
+            <artifactId>swagger-models</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+
+```
+
+1. 由于swagger的分组在配置文件中不支持中文，所以我们给他改成中文  
+   yml配置swagger文档的分组不支持中文作为key，所以我给该他改成中文，这样对前端提示友好些 
+1. 由于我们[统一了http最外层的响应包装](/mvc对外提供统一响应包装)，swagger是检测不出来的，所以我们要给他加上最外层的响应包装  
+   Result为http外层的响应包装
+1. 由于我们[统一了枚举](/mvc枚举序列化和反序列化的配置)，swagger也是检测不出来的，所以我们要给他加上枚举的注释以及对应的value
+
+代码如下  
+
+`@ConditionalOnExpression("#{!T(com.wuyi.mkt.common.emnus.ENV).isProd()}")`[非正式环境下才生效](/获取spring启动环境的工具类)
+
+
+```java
+@Slf4j
+@Component
+@EnableSwagger2Doc
+@ConditionalOnWebApplication
+@MyConditionalOnWebApplication
+@EnableSwaggerBootstrapUI
+@ConditionalOnExpression("#{!T(com.wuyi.mkt.common.emnus.ENV).isProd()}")// 非正式环境下才生效
+public class SwaggerConfiguration implements ApplicationListener<ApplicationReadyEvent>, BeanPostProcessor, ExpandedParameterBuilderPlugin, ParameterBuilderPlugin, ModelPropertyBuilderPlugin, OperationBuilderPlugin, OperationModelsProviderPlugin {
+
+    @Autowired
+    private ServerProperties serverProperties;
+    @Autowired
+    private TypeNameExtractor typeNameExtractor;
+    @Autowired
+    private TypeResolver resolver;
+
+    @Override
+    public void onApplicationEvent(ApplicationReadyEvent event) {
+        String ipAddress = IpUtils.getLocalHostInfo().getIpAddress();
+        Integer port = serverProperties.getPort();
+        String contextPath = serverProperties.getServlet().getContextPath();
+        log.info("接口文档地址:{}", String.format("http://%s:%s%s/doc.html", ipAddress, port, ObjectUtils.defaultIfNull(contextPath, "")));
+    }
+
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        // docket分组名使用中文的title
+        if (bean instanceof SwaggerProperties) {
+            Map<String, SwaggerProperties.DocketInfo> newDocket = Maps.newHashMap();
+            ((SwaggerProperties) bean).getDocket().forEach((k, v) -> newDocket.put(v.getTitle(), v));
+            ((SwaggerProperties) bean).setDocket(newDocket);
+        }
+        return bean;
+    }
+
+    @Override
+    public boolean supports(DocumentationType delimiter) {
+        return true;
+    }
+
+    /**
+     * 非Model的参数
+     * 实体里面的字段如果是枚举则增加文档
+     * 比如枚举作为实体中的成员，而实体则直接写在方法上作为参数
+     */
+    @Override
+    public void apply(ParameterExpansionContext context) {
+        try {
+            ParameterBuilder parameterBuilder = context.getParameterBuilder();
+            parameterBuilder.required(false);
+            Class<?> erasedType = context.getFieldType().getErasedType();
+            addDocForEnum(parameterBuilder, erasedType, false);
+
+            if (erasedType.isArray()) {
+                addDocForEnum(parameterBuilder, erasedType.getComponentType(), true);
+            } else if (List.class.isAssignableFrom(erasedType)) {
+                TypeBindings typeBindings = context.getFieldType().getTypeBindings();
+                erasedType = typeBindings.getTypeParameters().get(0).getErasedType();
+                addDocForEnum(parameterBuilder, erasedType, true);
+            }
+        } catch (Exception e) {
+            log.info("ParameterExpansionContext apply", e);
+        }
+    }
+
+    /**
+     * 非Model的参数如果是枚举则增加文档
+     * 比如枚举作为参数直接写在方法上
+     */
+    @Override
+    public void apply(ParameterContext context) {
+        try {
+            ParameterBuilder parameterBuilder = context.parameterBuilder();
+            parameterBuilder.required(false);
+            Class<?> erasedType = context.resolvedMethodParameter().getParameterType().getErasedType();
+            addDocForEnum(parameterBuilder, erasedType, false);
+
+            if (erasedType.isArray()) {
+                addDocForEnum(parameterBuilder, erasedType.getComponentType(), true);
+            } else if (List.class.isAssignableFrom(erasedType)) {
+                TypeBindings typeBindings = context.resolvedMethodParameter().getParameterType().getTypeBindings();
+                erasedType = typeBindings.getTypeParameters().get(0).getErasedType();
+                addDocForEnum(parameterBuilder, erasedType, true);
+            }
+        } catch (Exception e) {
+            log.info("ParameterContext apply", e);
+        }
+    }
+
+    /**
+     * 给一个model内的EnumProperty增加文档
+     */
+    @Override
+    public void apply(ModelPropertyContext context) {
+        try {
+            ModelPropertyBuilder builder = context.getBuilder();
+            builder.required(false);
+
+            Class<?> fieldType = context.getBeanPropertyDefinition()
+                    .transform(BeanPropertyDefinition::getRawPrimaryType)
+                    .orNull();
+
+            if (fieldType == null || !fieldType.isEnum()) {
+                return;
+            }
+
+            // 为了复用代码先这样搞，毕竟就是个文档
+            addDocForEnum(new ParameterBuilder() {
+
+                private final String description = (String) FieldUtils.readDeclaredField(builder, "description", true);
+                private final String name = (String) FieldUtils.readDeclaredField(builder, "name", true);
+
+                public ParameterBuilder description(String description) {
+                    builder.description(description);
+                    return this;
+                }
+
+                public ParameterBuilder allowableValues(AllowableValues allowableValues) {
+                    builder.allowableValues(allowableValues);
+                    return this;
+                }
+            }, fieldType, false);
+
+        } catch (Exception e) {
+            log.info("ModelPropertyContext apply", e);
+        }
+    }
+
+
+    /**
+     * 给当前的param增加文档，如果是枚举的话
+     *
+     * @see DeserializableEnum
+     */
+    private void addDocForEnum(ParameterBuilder parameterBuilder, Class<?> erasedType, boolean coverageModel) throws IllegalAccessException {
+        DeserializableEnum deserializableEnum = DeserializableEnum.getDeserializableEnumAndIdentityClass(erasedType)
+                .map(Map.Entry::getKey)
+                .orElse(null);
+        if (deserializableEnum == null) {
+            return;
+        }
+        // 枚举
+        Object[] enumConstants = erasedType.getEnumConstants();
+
+        // 获取所有枚举的可用值
+        List<String> values = Arrays.stream(enumConstants)
+                .map(Enum.class::cast)
+                .map(deserializableEnum::getIdentity)
+                .flatMap(identity -> {
+                    if (identity instanceof Object[]) {
+                        return Stream.of((Object[]) identity);
+                    }
+                    return Stream.of(identity);
+                }).map(String::valueOf)
+                .collect(Collectors.toList());
+
+        /*
+         * 默认值：
+         * 让前端在调试的时候可以不选，或者选择一个错误的值
+         */
+        values.add(0, "");
+        values.add("这是个错误的值");
+
+        /*
+         * 可用值描述：
+         * 枚举的doc和identity，拼成字符串
+         */
+        String description = Arrays.stream(enumConstants)
+                .map(Enum.class::cast)
+                .map(t -> {
+                    Object identity = deserializableEnum.getIdentity(t);
+                    if (!(identity instanceof Object[])) {
+                        identity = ObjectUtils.array(identity);
+                    }
+                    return Arrays.toString((Object[]) identity) + "=" + deserializableEnum.getDocFunction.apply(t);
+                }).collect(Collectors.joining(";"));
+
+        /*
+         * 如果没有description，则取ApiModel的注解
+         * 当做前缀，拼接可用值描述
+         */
+        String oldDescription = (String) FieldUtils.readDeclaredField(parameterBuilder, "description", true);
+        String name = (String) FieldUtils.readDeclaredField(parameterBuilder, "name", true);
+        if (StringUtils.isNotBlank(oldDescription) && !oldDescription.equals(name)) {
+            oldDescription += ":";
+        } else {
+            oldDescription = Optional.ofNullable(AnnotationUtils.findAnnotation(erasedType, ApiModel.class))
+                    .map(ApiModel::value)
+                    .map(t -> t + ":")
+                    .orElse("");
+        }
+
+        parameterBuilder.description(oldDescription + description)
+                .allowableValues(new AllowableListValues(values, "LIST"));
+        if (coverageModel) {
+            parameterBuilder.modelRef(new ModelRef("List", new AllowableListValues(values, "LIST")));
+        }
+    }
+
+    /**
+     * 添加响应包装的model，为了能够和responseMessages映射
+     *
+     * @see SwaggerConfiguration#apply(springfox.documentation.spi.service.contexts.OperationContext)
+     */
+    @Override
+    public void apply(RequestMappingContext context) {
+        if (Result.class.equals(context.getReturnType().getErasedType())) {
+            return;
+        }
+        ResolvedType returnType = resolver.resolve(Result.class, context.alternateFor(context.getReturnType()));
+        context.operationModelsBuilder().addReturn(returnType);
+    }
+
+    /**
+     * 由于配置了spring的bodyAdvice，swagger是检测不出来最外层的包装。
+     * 所以此配置增加最外层响应的包装
+     */
+    @Override
+    public void apply(OperationContext context) {
+        if (Result.class.equals(context.getReturnType().getErasedType())) {
+            return;
+        }
+        ResolvedType returnType = resolver.resolve(Result.class, context.alternateFor(context.getReturnType()));
+
+        ModelContext modelContext = ModelContext.returnValue(
+                context.getGroupName(),
+                returnType,
+                context.getDocumentationType(),
+                context.getAlternateTypeProvider(),
+                context.getGenericsNamingStrategy(),
+                context.getIgnorableParameterTypes());
+
+        ResponseMessage built = new ResponseMessageBuilder()
+                .code(ResponseMessagesReader.httpStatusCode(context))
+                .message(ResponseMessagesReader.message(context))
+                .responseModel(modelRefFactory(modelContext, typeNameExtractor).apply(returnType))
+                .build();
+
+        context.operationBuilder().responseMessages(newHashSet(built));
+    }
+}
+```
