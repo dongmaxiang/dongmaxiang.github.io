@@ -19,12 +19,14 @@ java-agent可以理解为是一个代理程序，非主程序，代理程序可�
 
 # 原理
 通过java-agent程序我们可以获取到`Instrumentation`实例，得到此实例之后可以干的事情就很多了，比如说aop字节码增强，或者重新定义class等  
-> 具体原理可参考[美团的技术分享-agent原理](https://tech.meituan.com/2019/11/07/java-dynamic-debugging-technology.html)
+> 具体原理可参考   
+> 1：[美团的技术分享-agent原理](https://tech.meituan.com/2019/11/07/java-dynamic-debugging-technology.html)  
+> 2：[美团的技术分享-字节码增强原理](https://tech.meituan.com/2019/09/05/java-bytecode-enhancement.html)
 
-1. agent程序可以在主程序启动之前启动，做你想做的操作,需要编写逻辑代码并封装成Jar包，并在jvm 启动命令添加 -javaagent:agentJar包的路径  
+1. agent程序可以在主程序启动之前启动，做你想做的操作,需要编写逻辑代码并封装成Jar包，并在jvm 启动命令添加 -\[javaagent|agentlib]:agentJar包的路径   
   jar包中的class方法signature必须为 `public static void premain(String agentArgs, Instrumentation inst)`
 
-2. 也可以在主程序运行过程中启动，通过jdk自带的方法`VirtualMachine#attach.loadAgent("你封装的agentJar包路径")`  
+2. 也可以在主程序运行过程中启动，jdk1.6之后才可以，通过jdk自带的方法`VirtualMachine#attach.loadAgent("你封装的agentJar包路径")`  
   jar包中的class方法signature必须为 `public static void agentmain(String agentArgs, Instrumentation inst)`
 
 ```java
