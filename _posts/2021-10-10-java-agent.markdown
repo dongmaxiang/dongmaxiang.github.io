@@ -132,6 +132,14 @@ public interface Instrumentation {
   <artifactId>invesdwin-instrument</artifactId>
   <version>1.0.14</version>
 </dependency>
+
+<repositories>
+  <repository>
+    <id>de.invesdwin</id>
+    <url>https://invesdwin.de/repo/invesdwin-oss-remote/</url>
+  </repository>
+</repositories>
+
 ```
 使用方式如下  
 ```java
