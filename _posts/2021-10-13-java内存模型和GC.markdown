@@ -2,7 +2,7 @@
 layout: post
 title: java内存模型和GC
 permalink: /java内存模型和GC
-date: 2021-10-10 17:43:40.000000000 +08:00
+date: 2021-10-13 17:43:40.000000000 +08:00
 categories: [java,jvm]
 tags: [jvm]
 ---
