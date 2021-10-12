@@ -90,16 +90,15 @@ static class RestartConfiguration {
 
 ## 分析远程热部署
 1. 用springBoot打包需要maven打包时包含devTools  
-```xml
-<plugin>
-	<groupId>org.springframework.boot</groupId>
-	<artifactId>spring-boot-maven-plugin</artifactId>
-    <configuration>
-        <excludeDevtools>false</excludeDevtools>
-    </configuration>
-</plugin>
-
-```
+    ```xml
+    <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+            <excludeDevtools>false</excludeDevtools>
+        </configuration>
+    </plugin>
+    ```
 
 2. 配置文件中必须要配置secret  
    spring.devtools.remote.secret=mysecret
@@ -111,40 +110,40 @@ static class RestartConfiguration {
    指定Program arguments为http://127.0.0.1:8081 即远端服务的地址
    
 * server端(remote)代码原理解析  
-```java
-@Configuration(proxyBeanMethods = false)
-// 如果没有配置，只要引入了jar包，默认就是开启的状态
-@ConditionalOnProperty(prefix = "spring.devtools.remote.restart", name = "enabled", matchIfMissing = true)
-static class RemoteRestartConfiguration {
-
-    // 筛选需要用restartClassLoader加载的class
-    @Bean
-    @ConditionalOnMissingBean
-    SourceDirectoryUrlFilter remoteRestartSourceDirectoryUrlFilter() {
-        return new DefaultSourceDirectoryUrlFilter();
+    ```java
+    @Configuration(proxyBeanMethods = false)
+    // 如果没有配置，只要引入了jar包，默认就是开启的状态
+    @ConditionalOnProperty(prefix = "spring.devtools.remote.restart", name = "enabled", matchIfMissing = true)
+    static class RemoteRestartConfiguration {
+    
+        // 筛选需要用restartClassLoader加载的class
+        @Bean
+        @ConditionalOnMissingBean
+        SourceDirectoryUrlFilter remoteRestartSourceDirectoryUrlFilter() {
+            return new DefaultSourceDirectoryUrlFilter();
+        }
+    
+        // 处理http的请求，接收参数，调用Restarter重启服务
+        @Bean
+        @ConditionalOnMissingBean
+        HttpRestartServer remoteRestartHttpRestartServer(SourceDirectoryUrlFilter sourceDirectoryUrlFilter) {
+            return new HttpRestartServer(sourceDirectoryUrlFilter);
+        }
+    
+        // 配置http地址的映射，相当于配置一个servlet,暴露一个接口，这样client通过此接口和server进行交互
+        @Bean
+        @ConditionalOnMissingBean(name = "remoteRestartHandlerMapper")
+        UrlHandlerMapper remoteRestartHandlerMapper(HttpRestartServer server, ServerProperties serverProperties, DevToolsProperties properties) {
+            Servlet servlet = serverProperties.getServlet();
+            String servletContextPath = (servlet.getContextPath() != null) ? servlet.getContextPath() : "";
+            
+            String url = servletContextPath + properties.getRemote().getContextPath() + "/restart";
+            
+            return new UrlHandlerMapper(url, new HttpRestartServerHandler(server));
+        }
+    
     }
-
-    // 处理http的请求，接收参数，调用Restarter重启服务
-    @Bean
-    @ConditionalOnMissingBean
-    HttpRestartServer remoteRestartHttpRestartServer(SourceDirectoryUrlFilter sourceDirectoryUrlFilter) {
-        return new HttpRestartServer(sourceDirectoryUrlFilter);
-    }
-
-    // 配置http地址的映射，相当于配置一个servlet,暴露一个接口，这样client通过此接口和server进行交互
-    @Bean
-    @ConditionalOnMissingBean(name = "remoteRestartHandlerMapper")
-    UrlHandlerMapper remoteRestartHandlerMapper(HttpRestartServer server, ServerProperties serverProperties, DevToolsProperties properties) {
-        Servlet servlet = serverProperties.getServlet();
-        String servletContextPath = (servlet.getContextPath() != null) ? servlet.getContextPath() : "";
-        
-        String url = servletContextPath + properties.getRemote().getContextPath() + "/restart";
-        
-        return new UrlHandlerMapper(url, new HttpRestartServerHandler(server));
-    }
-
-}
-```
+    ```
 
 * client端代码原理解析  
   client负责监听文件的变化，然后上传到服务端，服务端接收到文件之后会用新的classLoader重新加载class达到热部署的目的  
