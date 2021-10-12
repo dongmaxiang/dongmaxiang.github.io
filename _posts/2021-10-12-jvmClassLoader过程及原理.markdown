@@ -7,12 +7,12 @@ categories: [java,jvm]
 tags: [jvm]
 ---
 
-# 1. 类加载过程
+# 类加载过程
 通过类加载器加载，如果已经加载过则不可以再次加载，但是可以通过不同的classLoader加载同一个class
 
-## 1.1 都有哪些类加载器呢
+##  都有哪些类加载器呢
 
-### 1.1.1 jdk1.8
+###
 
 1. 引导类加载器=BootstrapClassloader  
    是使用C++语言实现的，负责加载JVM虚拟机运行时所需的基本系统级别的类，如java.lang.String, java.lang.Object等等  
@@ -57,3 +57,67 @@ static class AppClassLoader extends URLClassLoader {
    ...
 }
 ```
+
+
+# 连接class
+1. 验证  
+   验证JVM是否支持对应的字节码语法  
+   
+2. 准备  
+   静态变量分配内存空间，并将其赋予默认值（0，false，null等）  
+   如：`static int num = 50;`则此步骤为变量num分配空间，并赋值为0   
+
+3. 解析  
+   将类中的符号引用转换为直接引用  
+   编译的class字节码都是符号引用，符号的意思就是占位符，因为在实际运行当中要知道明确的地址才能调用  
+   所以在这个解析的阶段，如果有引用其他的class就会加载其他的class到内存中并初始化，然后才能得到对应的内存地址    
+   知道内存地址意味着可以直接调用（也就是直接引用）  
+
+
+# 初始化class
+
+```java
+
+    static class A {
+        static {
+            System.out.println("A static");
+        }
+        A () {
+            System.out.println("A constructor");
+        }
+
+        static B b = new B();
+
+    }
+
+    static class B {
+        static A a = new A();
+        static {
+            System.out.println("B static");
+        }
+
+        B () {
+            System.out.println("B constructor");
+        }
+
+    }
+
+    @SneakyThrows
+    public static void main(String[] args) {
+        Class<B> bClass = B.class;
+        B b = bClass.newInstance();
+    }
+```
+
+输出顺序为  
+A static  
+B constructor  
+A constructor  
+B static  
+B constructor  
+
+## 总结初始化顺序
+优先加载引用的class，并初始化static修饰的字段和方法，顺序从上到下  
+然后初始化自己的static，也是从上到下  
+static初始化完之后，在初始化非static的字段，顺序是优先父类，然后是自己的，顺序也是从上到下  
+最后是初始化构造，优先父类的，最后才是自己的
