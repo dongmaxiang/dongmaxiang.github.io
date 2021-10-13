@@ -8,11 +8,10 @@ tags: [jvm,热部署]
 ---
 
 # 简介
-* 什么是java-agent、作用是什么、怎么用、原理是什么? 
-
-java-agent可以理解为是一个代理程序，非主程序，代理程序可以做的事情就很多了，取决于你想写什么逻辑  
-比如说[Alibaba开源的Java诊断工具](https://arthas.aliyun.com/doc/)  
-也可以动态的替换字节码，实现代码热更新的效果  
+* 什么是java-agent、作用是什么、怎么用、原理是什么?   
+  java-agent可以理解为是一个代理程序，非主程序，代理程序可以做的事情就很多了，取决于你想写什么逻辑  
+  比如说[Alibaba开源的Java诊断工具](https://arthas.aliyun.com/doc/)  
+  也可以动态的替换字节码，实现代码热更新的效果  
 
 ---
 ---
@@ -125,26 +124,28 @@ public interface Instrumentation {
 > 所以这种方法目前只能支持修改方法体
 
 
-## 在运行时获取到`Instrumentation`实例
-```xml
-<dependency>
-  <groupId>de.invesdwin</groupId>
-  <artifactId>invesdwin-instrument</artifactId>
-  <version>1.0.14</version>
-</dependency>
+# 在运行时获取到`Instrumentation`实例  
 
-<repositories>
-  <repository>
-    <id>de.invesdwin</id>
-    <url>https://invesdwin.de/repo/invesdwin-oss-remote/</url>
-  </repository>
-</repositories>
-
+配置第三方jar包  
+  ```xml
+  <dependency>
+    <groupId>de.invesdwin</groupId>
+    <artifactId>invesdwin-instrument</artifactId>
+    <version>1.0.14</version>
+  </dependency>
+  
+  <repositories>
+    <repository>
+      <id>de.invesdwin</id>
+      <url>https://invesdwin.de/repo/invesdwin-oss-remote/</url>
+    </repository>
+  </repositories>
 ```
-使用方式如下  
-```java
-DynamicInstrumentationLoader.waitForInitialized();
-Instrumentation instrumentation = InstrumentationSavingAgent.getInstrumentation();
+
+使用方式如下    
+  ```java
+  DynamicInstrumentationLoader.waitForInitialized();
+  Instrumentation instrumentation = InstrumentationSavingAgent.getInstrumentation();
 ```
 
 原理就是通过`VirtualMachine#attach`方法attach自己，然后把instrumentation变为自己的静态变量

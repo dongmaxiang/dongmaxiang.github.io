@@ -14,6 +14,9 @@ springAop大体分为两种技术方式，一种是基于动态代理的，一�
 * 动态代理的有基于
   1. jdk的
   2. 基于CGLIB的
+    
+
+
   
 * 字节码增强的有
   1. 在编译时做增强的
@@ -167,6 +170,39 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport imp
 		this.advisedBeans.put(cacheKey, Boolean.FALSE);
 		return bean;
 	}
+	
+    protected Object createProxy(Class<?> beanClass, @Nullable String beanName, @Nullable Object[] specificInterceptors, TargetSource targetSource) {
+
+        if (this.beanFactory instanceof ConfigurableListableBeanFactory) {
+            AutoProxyUtils.exposeTargetClass((ConfigurableListableBeanFactory) this.beanFactory, beanName, beanClass);
+        }
+
+        ProxyFactory proxyFactory = new ProxyFactory();
+        proxyFactory.copyFrom(this);
+
+        if (!proxyFactory.isProxyTargetClass()) {
+            if (shouldProxyTargetClass(beanClass, beanName)) {
+                proxyFactory.setProxyTargetClass(true);
+            }
+            else {
+                evaluateProxyInterfaces(beanClass, proxyFactory);
+            }
+        }
+
+        // 查找可以匹配的切入器
+        Advisor[] advisors = buildAdvisors(beanName, specificInterceptors);
+        proxyFactory.addAdvisors(advisors);
+        proxyFactory.setTargetSource(targetSource);
+        customizeProxyFactory(proxyFactory);
+
+        proxyFactory.setFrozen(this.freezeProxy);
+        if (advisorsPreFiltered()) {
+            proxyFactory.setPreFiltered(true);
+        }
+
+        // 创建代理，动态判断是用cglib还是jdk
+        return proxyFactory.getProxy(getProxyClassLoader());
+    }
 	...
 }
 ```
@@ -279,3 +315,5 @@ public class TransactionRollbackSupport implements BeanDefinitionRegistryPostPro
     }
 }
 ```
+
+原理，[在spring注册完所有的beanDefinition之后](/解析spring是如何向beanFactory注册bean的)，获取"transactionAttributeSource"的definition，并setInstanceSupplier，[这样在实例化的时候就会用自己的了](/spring对bean实例化的流程#创建beanwrapper)
