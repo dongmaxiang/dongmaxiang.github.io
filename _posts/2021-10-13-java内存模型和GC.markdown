@@ -23,7 +23,7 @@ tags: [jvm]
 对象头和数据体两大部分  
 ### 1. 对象头
 1. 前面8个字节为markword，记录对象被上锁的各种状态或者垃圾回收和hashcode相关的信息  
-  默认无锁的情况如下，有锁的情况参考[java锁](#java锁)  
+  默认无锁的情况如下，有锁的情况参考[java锁](#synchronized)  
   * 64位系统中(64bit)  
     未使用：25位  
     hashcode:  31位存储对象的System.identityHashCode()，采用延迟加载技术  
@@ -66,15 +66,26 @@ tags: [jvm]
 # java锁
 * java都有哪些锁呢？  
    1. 是否阻塞
-      悲观、乐观
+      悲观(阻塞其他线程-synchronized)、乐观(不阻塞其他线程-ReentrantLock和ReentrantReadWriteLock)
       
    2. 是否公平
-      非公平、公平
-      
-   3. 是否共享
-      共享锁、排他锁
-      
-   4. 二次是否能获取
-     不可重入锁、可重入锁
+      非公平(synchronized)、公平(ReentrantLock和ReentrantReadWriteLock)
 
-* java大部分锁都是通过对象头中的markword来实现的
+   3. 二次是否能获取
+     不可重入锁(jdk没有自带的)、可重入锁(jdk自带的锁都可以重入)  
+      
+   4. 是否共享
+      共享锁(ReentrantReadWriteLock)、排他锁
+
+* 大体分为synchronized、ReentrantLock和ReentrantReadWriteLock3个阵营  
+
+## synchronized
+阻塞、非公平、可重入、排他锁  
+了解synchronized之前先了解下对象头中的markword数据  
+
+
+## ReentrantLock
+非阻塞和阻塞、非公平和公平、可重入、排他锁
+
+## ReentrantReadWriteLock
+非阻塞和阻塞、非公平和公平、可重入、共享锁
