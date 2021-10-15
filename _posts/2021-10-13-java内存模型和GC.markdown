@@ -50,14 +50,14 @@ tags: [jvm]
 
 ### 2. 对象数据体
 对象的里面的数据  
-如果过基本类型则是对应的值占用的空间，如果是引用类型那么大小有可能是8bit或者4bit[取决于是否开启压缩指针](/JVM所有的参数配置详解#3--xxusecompressedoops)  
+如果是基本类型则是对应的值占用的空间，如果是引用类型那么大小有可能是8bit或者4bit[取决于是否开启压缩指针](/JVM所有的参数配置详解#3--xxusecompressedoops)  
    
 ### 3. 对齐填充数据(可选)  
 [根据对象对齐空间进行对齐，默认为8bit](/JVM所有的参数配置详解#5--xxobjectalignmentinbytes8)  
 因为必须是8的倍数，不是8的倍数剩下的将要补齐  
    
 
-所以一个1new Object()`为16字节，8字节为对象头，后面8字节为class对象的指针和数据填充  
+所以一个`new Object()`为16字节，8字节为对象头，后面8字节为class对象的指针和数据填充  
 1G内存大约可以存1024 * 1024 * 1024 / 16 = 67108864(约等于6千7百万多个对象)  
 
 ---
@@ -65,27 +65,32 @@ tags: [jvm]
 
 # java锁
 * java都有哪些锁呢？  
-   1. 是否阻塞
+   1. 是否阻塞  
       悲观(阻塞其他线程-synchronized)、乐观(不阻塞其他线程-ReentrantLock和ReentrantReadWriteLock)
       
-   2. 是否公平
+   2. 是否公平  
       非公平(synchronized)、公平(ReentrantLock和ReentrantReadWriteLock)
 
-   3. 二次是否能获取
+   3. 二次是否能获取  
      不可重入锁(jdk没有自带的)、可重入锁(jdk自带的锁都可以重入)  
       
-   4. 是否共享
+   4. 是否共享  
       共享锁(ReentrantReadWriteLock)、排他锁
 
 * 大体分为synchronized、ReentrantLock和ReentrantReadWriteLock3个阵营  
 
 ## synchronized
-阻塞、非公平、可重入、排他锁  
-了解synchronized之前先了解下对象头中的markword数据  
+* 特性：阻塞、非公平、可重入、排他锁  
+* 原理  
+  jdk1.6引入了偏向锁和轻量级锁，1.6之前都是重量级锁，意思就是互斥等待都需要内核态完成（操作系统），开销非常的大  
+  每一个Java对象就有一把看不见的锁，存放在对象头中叫markword，占用8个字节(动态的内容)，[无锁的情况下里面存放默认的数据](#1-对象头)  
+  偏向锁、轻量级锁、重量级锁都是根据markword里面的数据来标识当前锁的状态  
+  在32位jvm中占用空间如下所示  
+  ![如图](/assets/images/posts/2021/markword.png)
 
 
 ## ReentrantLock
-非阻塞和阻塞、非公平和公平、可重入、排他锁
+特性：非阻塞和阻塞、非公平和公平、可重入、排他锁
 
 ## ReentrantReadWriteLock
-非阻塞和阻塞、非公平和公平、可重入、共享锁
+特性：非阻塞和阻塞、非公平和公平、可重入、共享锁
