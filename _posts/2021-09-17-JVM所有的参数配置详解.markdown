@@ -11,3 +11,29 @@ tags: [jvm]
 
 # 启动时输出非默认的jvm参数(人为配置的)
 1. -XX:+PrintCommandLineFlags
+
+# 内存
+## 1. -Mxs1024m  
+   最小堆内存大小
+
+## 2. -Mmx2048m  
+   最大堆内存大小
+   
+## 3. -XX:+UseCompressedOops  
+   开启普通对象的指针压缩，此参数也会默认开启UseCompressedClassPointers  
+   一个对象的指针默认为8字节(64bit)，压缩后变为4字节(32bit)，最大可表示4G(2^32)，经JVM处理之后最大可访问地址为32G(堆内存大于32G时会自动失效)  
+   为什么压缩后用4字节就可以最大访问32G呢，因为根据jvm对象对齐空间来算(ObjectAlignmentInBytes默认是8)，也就是按照最小对象8字节来算有8个空挡(间隔)，所以2^32*8bit=32G  
+   开启之后会在机器码中植入压缩与解压指令，会给JVM增加额外的开销  
+   在jdk6以后不是clientVM且是64位的jvm中默认为开启状态  
+   
+## 4. -XX:+UseCompressedClassPointers  
+   开启在对象头中[类指针的压缩](/java内存模型和GC#1-对象头)  
+   如果UseCompressedOops是关闭的状态，则会报错  
+   
+## 5. -XX:ObjectAlignmentInBytes=8  
+   对象对齐空间大小(bit)默认为8
+
+# 锁
+1. -XX:-UseBiasedLocking=false  
+  关闭[偏向锁](/java内存模型和GC#java锁)、jdk1.6之后默认开启
+   
