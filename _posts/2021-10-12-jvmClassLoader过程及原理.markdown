@@ -173,11 +173,11 @@ public class Test {
 
 ### 总结初始化顺序
 
-1. 优先级最高的：如果是<font color='red'>static final 修饰的Java 基本类型</font>则不会初始化class，可以直接访问，其他情况则会初始化class  
+1. 优先级最高的：如果是<font color='red'>static final 修饰的Java 基本类型</font>则不会初始化class，可以直接访问，称之为常量  
    
-2. 如果是访问static的变量或者是new对象，优先初始化顶级父类的 static 修饰的静态字段、静态块，按照声明的顺序初始化，然后是子类，依次到当前的class  
+2. 如果是访问static的变量或者是new对象，优先初始化顶级父类的 static 修饰的静态字段或静态块，按照声明的顺序初始化，然后是子类，依次到当前的class  
   如果static声明的字段或者方法块引用到其他的class，则会初始化其对应的class，如果已经或正在初始化，可以直接使用  
-  注意：[<font color='red'>如果正在初始化，则class的内容只做了准备的阶段，所以class里面的属性都是null或者都是默认值</font>](#22-准备)
+  注意：[<font color='red'>如果正在初始化，则class的内容只做了准备的阶段，所以class里面的属性都是null或者都是默认值</font>](#22-准备)  
    
 3. 如果是创建对象的实例，则上面的静态块初始化完毕之后，在初始化代码块（从顶级的父类开始，按照声明的顺序，然后是子类，依次到当前的class），最后是构造方法初始化
 
