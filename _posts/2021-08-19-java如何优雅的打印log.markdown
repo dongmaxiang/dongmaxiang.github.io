@@ -45,6 +45,7 @@ public class JSONMaxSerializeConfig extends SerializeConfig {
     private final int MAX_SERIALIZE_NUM;
 
     public JSONMaxSerializeConfig(int MAX_SERIALIZE_NUM) {
+        super(true);// 不使用ASM，以field类型为基础进行序列化，不然无法使用当前ObjectSerializer
         this.MAX_SERIALIZE_NUM = MAX_SERIALIZE_NUM;
         this.register(new Module() {
 
