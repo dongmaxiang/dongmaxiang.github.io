@@ -99,4 +99,4 @@ GC的时候会暂停JVM所有的线程，此时jvm状态为STW(stop the world)�
    > 能够确保在某一段代码片段之中，引用关系不会发生变化称之为安全区  
    > 在执行到安全区域里面的代码时，首先会标识自己在安全区(比如Sleep或Blocked的线程)，GC时会忽略此线程，离开安全区之前必须要接收到JVM可以离开的信号，比如GC未完成则不允许离开安全区  
 2. jit逆优化([重新修改方法体redefineClass](/java-agent#agent实现热更新))  
-3. [偏向锁释放锁时](/java内存模型和GC#synchronized)
+3. [偏向锁升级为轻量级锁时](/java内存模型和GC#轻量级锁)

@@ -99,7 +99,6 @@ static class Test {
 
 
 ## 3 初始化class  
-此步骤由C++实现
 
 ```java
 import lombok.SneakyThrows;

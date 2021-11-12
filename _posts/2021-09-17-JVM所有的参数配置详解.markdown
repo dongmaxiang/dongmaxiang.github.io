@@ -15,12 +15,29 @@ tags: [jvm]
 # [循环放置安全点](/java安全点safePoint以及JIT#安全点都有哪些呢)  
 1. -XX:+UseCountedLoopSafepoints
 
+# 设置默认的hashcode  
+
+* -XX:hashCode=0  
+  此类方案返回一个Park-Miller伪随机数生成器生成的随机数
+  
+* -XX:hashCode=1  
+  此类方案将对象的内存地址，做移位运算后与一个随机数进行异或得到结果
+
+* -XX:hashCode=2   
+  永远返回固定值1
+    
+* -XX:hashCode=3  
+  此类方案返回一个自增序列的当前值  
+  
+* -XX:hashCode=4  
+  此类方案返回当前对象的内存地址  
+
 # 内存
-## 1. -Mxs1024m  
-   最小堆内存大小
+## 1. -Xms1024m  
+   最小堆内存大小(memory start)
 
 ## 2. -Mmx2048m  
-   最大堆内存大小
+   最大堆内存大小(memory max)
    
 ## 3. -XX:+UseCompressedOops  
    开启普通对象的指针压缩，此参数也会默认开启UseCompressedClassPointers  
@@ -38,23 +55,24 @@ tags: [jvm]
 
 # 锁
 
-1. -XX:-UseBiasedLocking  
-  关闭[偏向锁](/java内存模型和GC#synchronized)、jdk1.6之后默认为开启偏向锁。偏向锁竞争时会STW，如果竞争过于激烈，会导致性能极具下降  
+## -XX:-UseBiasedLocking  
+  关闭[偏向锁](/java内存模型和GC#偏向锁)、jdk1.6之后默认为开启偏向锁。偏向锁竞争时会STW，如果竞争过于激烈，会导致性能下降  
    
-1. -XX:BiasedLockingStartupDelay=4000(默认)  
+## -XX:BiasedLockingStartupDelay=4000  
   jvm启用偏向锁延迟时间，偏向锁的信息都是在markword(对象头)里面，刚出生的对象markword信息都是由对应的Klass中的prototype_header(包含锁标识、epoch)决定的  
   默认启动4秒之后会把所有的klass的prototype_header中的数据标识为匿名偏向锁，只有匿名偏向锁才可以使用偏向锁  
   > 延时机制是为了解决：JVM启动时必不可免会有大量sync的操作，而偏向锁竞争时会STW并升级为轻量级锁。如果开启了偏向锁，竞争会发生大量锁撤销和锁升级操作，大大降低JVM启动效率  
    
-1. -XX:BiasedLockingBulkRebiasThreshold=20(默认)  
+## -XX:BiasedLockingBulkRebiasThreshold=20  
   偏向锁批量重偏向阈值，因为默认只能锁升级，升级轻量级锁需要等待[全局安全点](/java安全点safePoint以及JIT#safepoint)，会耗费性能  
   如果某个class的对象的偏向锁升级轻量级锁次数达到第20次时，则会标识第20个(包含)之后的对象全部可以偏向新的线程，避免升级为轻量级锁  
   > 批量重偏向（bulk rebias）机制是为了解决：一个线程创建了大量对象并执行了同步操作，后来另一个线程也来将这些对象作为锁对象进行操作，这样会导致大量的偏向锁升级为轻量级锁  
+  > 重偏原理是修改klass的prototype_header中的epoch,做+1操作，这样偏向锁上锁时检测epoch为失效状态，就会重新使用CAS上锁  
   
-1. -XX:BiasedLockingBulkRevokeThreshold=40(默认)  
+## -XX:BiasedLockingBulkRevokeThreshold=40  
   偏向锁批量撤销阈值，撤销之后直接从轻量级锁开始。同上，如果锁升级过多，在25秒(如下参数设置)内，超过40次，则直接撤销当前class对应所有对象的偏向锁，后续一律从轻量级锁开始  
   撤销的原理是：刚出生的对象markword信息都是由对应的Klass的决定的，修改Klass中的prototype_header弃用偏向锁即可  
   > 批量撤销（bulk revoke）机制是为了解决：在明显多线程竞争剧烈的场景下使用偏向锁是不合适的  
    
-1. -XX:BiasedLockingDecayTime=25000(默认)  
+## -XX:BiasedLockingDecayTime=25000(默认)  
   同上，一定时间内的阈值  

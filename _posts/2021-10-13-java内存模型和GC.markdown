@@ -9,6 +9,7 @@ tags: [jvm]
 
 让我们带着问题一探究竟  
 一个Object对象占用几个字节，里面内容都是什么(对象占用大小)？在哪里分布呢(内存模型)？什么时候会销毁(GC)？  
+> klass是java中，类的元信息在jvm中的表现形式，就是在c++中，类的元信息是通过klass来表示的
 
 # 对象占用大小
 
@@ -85,7 +86,9 @@ tags: [jvm]
 * 特性：阻塞、非公平、可重入、排他锁  
 * 原理  
   jdk1.6引入了偏向锁和轻量级锁，1.6之前都是重量级锁，意思就是互斥等待都需要内核态完成（操作系统），开销非常的大，所以优化之后的synchronized可以进行锁升级  
-  每一个Java对象就有一把看不见的锁，存放在对象头中叫markword，占用8个字节(动态的内容)，[无锁的情况下里面存放默认的数据](#1-对象头)  
+  每一个Java对象就有一把看不见的锁，存放在对象头中叫markword，占用8个字节(动态的内容)  
+  当创建一个对象时，会通过Klass的prototype_header来初始化该对象的markword，prototype_header包含了lock(锁标识-适用于所有的实例)、epoch(偏向时间戳-用来控制锁是否失效的版本号)  
+  [无锁的情况下里面存放默认的数据](#1-对象头)  
   偏向锁、轻量级锁、重量级锁都是根据markword里面的数据来标识当前锁的状态(所以markword里面的内容都是动态的)，一个对象锁升级之后不可回退  
   在32位jvm中占用空间如下所示(4\*8=32bit)  
   ![如图](/assets/images/posts/2021/markword.png)  
@@ -109,28 +112,32 @@ tags: [jvm]
   所以无锁和偏向锁的锁标志位都为01，然后在通过额外的1bit(biased_lock)用来区分当前对象是否为偏向锁  
   只有匿名偏向时(lock=01,biased_lock=1,threadId=null)才可以使用偏向锁,否则从轻量级锁开始  
   
-  * 无锁： 
+  ### 无锁 
     锁标志位为lock=01，偏向锁标识为biased_lock=0  
-    对于无锁状态的锁对象，如果有竞争，会直接进入到轻量级锁，所以没有关闭偏向锁那么JVM在启动4秒之后(-XX:BiasedLockingStartupDelay=4000)，会将所有加载的Klass的prototype_header修改为匿名偏向样式  
-    当创建一个对象时，会通过Klass的prototype_header来初始化该对象的对象头，prototype_header包含了锁标识(适用于所有的实例)、epoch(偏向时间戳)  
-    > 为什么要延迟之后修改呢？JVM启动时必不可免会有大量sync的操作，而偏向锁竞争时会STW并升级为轻量级锁。如果开启了偏向锁，会发生大量锁撤销和锁升级操作，大大降低JVM启动效率  
+    对于无锁状态的锁对象，如果有竞争，会直接进入到轻量级锁，所以如果没有关闭偏向锁那么JVM在启动4秒之后([-XX:BiasedLockingStartupDelay=4000](/JVM所有的参数配置详解#-xxbiasedlockingstartupdelay4000))，会将所有加载的Klass的prototype_header修改为匿名偏向锁  
+    > 为什么要延迟之后修改呢？  
+    > JVM启动时必不可免会有大量sync的操作，而偏向锁竞争时会STW并升级为轻量级锁，锁升级不可回退。如果开启了偏向锁，会发生大量锁撤销和锁升级操作，大大降低JVM启动效率  
     
-  * 偏向锁：  
-    只有匿名偏向锁时才可以使用偏向锁  
+  ### 偏向锁  
+    因为偏向锁会占用hashcode空间，如果该对象已被产生hashcode则不能使用偏向锁，如果在偏向时产生hashcode,那么会升级为轻量级锁   
+    > JVM默认的计算identity hash code的方式得到的是一个随机数，[如果不想为随机数可参考](/JVM所有的参数配置详解#设置默认的hashcode), 因而我们必须要保证一个对象的identity hash code只能被底层JVM计算一次  
+    > Identity hash code是未被覆写的 java.lang.Object.hashCode() 或者 java.lang.System.identityHashCode(Object) 所返回的值  
+    
+    只有匿名偏向时才可以使用偏向锁  
     匿名偏向：锁标志位为lock=01，偏向锁标识为biased_lock=1, 且threadId为空(未偏向任何线程)，代表当前为匿名偏向    
-    markword里面有54(64位jvm)或者23(32位jvm)bit表示偏向锁偏向的线程id，未偏向时此值为空，上锁时依赖一次CAS原子指令，设置对应的线程的id，如果失败或已偏向其他线程，则会重偏或竞争升级为轻量级锁  
-    默认情况下已上锁的threadId不会自动释放(减少CAS指令的调用)，如果有新的线程竞争发现锁偏向的线程id不是自己，那么就会判断对象头中的epoch是否可其Klass中的epoch一致，如果不一致带可以可重偏，否则竞争升级为轻量级锁(CAS自旋)  
-    > 这个过程大致为：其他线程请求锁,虚拟机要所有线程在最近的[安全点](/java安全点safePoint以及JIT#什么时候会用到安全点)阻塞(STW)，判断  
-    > 以被锁对象和新线程作为参数构造一个VM_Operation vo，在全局安全点下，VM_Thread去执行vo，vo的内部逻辑
+    markword里面有54(64位jvm)或者23(32位jvm)bit表示偏向锁偏向的线程id，未偏向时此值为空，上锁时依赖一次CAS原子指令，设置对应的线程的id，默认情况下已上锁的threadId不会自动释放(减少CAS指令的调用)，如果上锁失败或已偏向其他线程，则会进行重偏或竞争升级为轻量级锁  
+    epoch的作用是记录偏向锁的版本号，用来判断偏向锁是否失效(实例的epoch != klass的epoch)，epoch默认是有效的，如果失效可以重偏，什么时候会失效呢？参考[-XX:BiasedLockingBulkRebiasThreshold=20](/JVM所有的参数配置详解#-xxbiasedlockingbulkrebiasthreshold20)  
+    > 偏向锁上锁大致过程为：  
+    > 在匿名偏向状态才可以上锁，CAS设置threadId成功代表上锁成功，失败则会进行锁升级为轻量级锁  
+    > 如果epoch失效，则会重偏(非重偏的逻辑只要有竞争就会升级为轻量级锁)，CAS设置threadId和epoch最新值，失败则会进行锁升级  
+    > > 偏向锁锁升级为轻量级锁的大致流程为  
+    > > 其他线程请求锁,以被锁对象和新线程作为参数构造一个VM_Operation vo，新线程被挂起，在[全局安全点(STW)]时(/java安全点safePoint以及JIT#什么时候会用到安全点)，VM_Thread去执行vo  
+    > > vo内部逻辑是去检查持有偏向锁的线程状态，如果已经销毁则设置对象为无锁状态，如果
     
-  * 轻量级锁：  
-    锁标志位为lock=00
-    偏向锁失效(超过-XX:BiasedLockingBulkRevokeThreshold=40默认的次数)或竞争时，则使用轻量级锁
+  ### 轻量级锁  
+    锁标志位为lock=00  
+    偏向锁失效(超过-XX:BiasedLockingBulkRevokeThreshold=40默认的次数)或偏向锁竞争时，就会使用轻量级锁
     
-  * 重偏向锁和撤销偏向锁：
-    https://segmentfault.com/a/1190000023665056
-    
-  
 
 ---
 
