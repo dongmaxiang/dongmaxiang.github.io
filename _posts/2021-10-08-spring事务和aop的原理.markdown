@@ -242,7 +242,8 @@ spring.xml: `<tx:annotation-driven/>`
   `TransactionManagementConfigurationSelector#selectImports`
 
 ## 基于[字节码增强](/java-agent)  
-字节码增强，spring兼容的不太好。因为字节码需要agent，并且需要class字节器转换器。基于字节码的切入，即使不开启事务的注解，也会生效，所以可以不用配置注解。    
+字节码增强，spring兼容的不太好。因为字节码需要agent，并且需要class字节器转换器。  
+基于字节码的切入，即使不用配置事务的注解`@EnableTransactionManagement`，也会生效。    
 只要保证要切入的类在加载之前agent能正常运行且有class转换器`org.springframework.transaction.aspectj.AnnotationTransactionAspect`即可  
 
 ---
