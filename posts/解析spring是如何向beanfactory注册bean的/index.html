@@ -1,0 +1,700 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><!-- hexo injector head_begin start --><script>
+(function(){
+    if (location.host.indexOf('github') > -1){
+        location.href = 'https://dongmaxiang.vercel.app' + location.pathname;
+    }
+})(); 
+</script><!-- hexo injector head_begin end --><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>解析spring是如何向beanFactory注册bean的 | title</title><meta name="keywords" content="源码,spring"><meta name="author" content="author"><meta name="copyright" content="author"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="背景ConfigurationClassPostProcessor该类是一个BeanFactoryPostProcessor后置处理程序，其主要功能就是扫描beanFactory已注册的bean上的注解进而处理注解对应的职责在spring的refresh阶段调用beanFactoryPostProcessors时该类才开始工作    在springContext初始化的时候通过Annotation">
+<meta property="og:type" content="article">
+<meta property="og:title" content="解析spring是如何向beanFactory注册bean的">
+<meta property="og:url" content="https://dongmaxiang.vercel.app/posts/%E8%A7%A3%E6%9E%90spring%E6%98%AF%E5%A6%82%E4%BD%95%E5%90%91beanfactory%E6%B3%A8%E5%86%8Cbean%E7%9A%84/">
+<meta property="og:site_name" content="title">
+<meta property="og:description" content="背景ConfigurationClassPostProcessor该类是一个BeanFactoryPostProcessor后置处理程序，其主要功能就是扫描beanFactory已注册的bean上的注解进而处理注解对应的职责在spring的refresh阶段调用beanFactoryPostProcessors时该类才开始工作    在springContext初始化的时候通过Annotation">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-9.png">
+<meta property="article:published_time" content="2021-09-19T03:47:56.000Z">
+<meta property="article:modified_time" content="2021-09-19T03:47:56.000Z">
+<meta property="article:author" content="author">
+<meta property="article:tag" content="源码">
+<meta property="article:tag" content="spring">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-9.png"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://dongmaxiang.vercel.app/posts/%E8%A7%A3%E6%9E%90spring%E6%98%AF%E5%A6%82%E4%BD%95%E5%90%91beanfactory%E6%B3%A8%E5%86%8Cbean%E7%9A%84/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//www.google-analytics.com" crossorigin=""/><link rel="preconnect" href="//hm.baidu.com"/><link rel="preconnect" href="//fonts.googleapis.com" crossorigin=""/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="google-site-verification" content="uKCYPhzuOQS6R9c8ZI9OAbvmoeObhrmxe-U6Ijl_YPY"/><meta name="baidu-site-verification" content="code-RSipQpNIZM"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?dde0ff961302057974d83940aa88c02f";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script><script async="async" src="https://www.googletagmanager.com/gtag/js?id=G-RPEPZKPQGQ"></script><script>window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-RPEPZKPQGQ');
+</script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Titillium+Web&amp;display=swap" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.json","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":200},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: true,
+    post: true
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: author","link":"链接: ","source":"来源: title","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: true,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '解析spring是如何向beanFactory注册bean的',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2021-09-19 11:47:56'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+          const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+          const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+          const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+          if (t === undefined) {
+            if (isLightMode) activateLightMode()
+            else if (isDarkMode) activateDarkMode()
+            else if (isNotSpecified || hasNoSupport) {
+              const now = new Date()
+              const hour = now.getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><!-- hexo injector head_end start -->
+<link rel="stylesheet" href="/css/custom.css">
+<script>
+window.Traditionalized = (arg) => arg;
+</script><script>
+// 自言自语支持上传图片
+addEventListener("load", function() {
+    if (!window["atEvery"]) {
+        return;
+    }
+    let judgeSystem_ = Client.prototype.judgeSystem;
+    Client.prototype.judgeSystem = function (){
+        judgeSystem_.apply(this, arguments);
+        if (!this.system.name){
+            this.system.name = navigator.platform;
+        }
+    };
+    atEvery.prototype.beginUpload = function(file) {
+        function Show() {
+            fadeIn("shade");
+            fadeIn("shuoshuo-modal");
+        }
+        let currentUser = AV.User.current();
+        if (currentUser) { /* console.log(currentUser); */ } else { /* document.getElementById("logw").innerHTML= "<center><pre><code>" + text15 + "</code></pre></center>"; */
+            Show();
+            return;
+        }
+        if (!/\.(jpg|gif|jpeg|ico|png|svg|mp4|mov)$/i.test(file.name)) {
+            alert("不支持的文件类型，支持的文件格式有jpg|gif|jpeg|ico|png|svg|mp4|mov");
+            return;
+        }
+        let fileType = "";
+        let sourceSize = (file.size / 1024).toFixed(0);
+        let sourceSizeLimit = 1024 * 50;
+        if (sourceSize > sourceSizeLimit) {
+            alert("资源上传最大限制为50M");
+            return;
+        }
+        if (/\.(jpg|gif|jpeg|ico|png|svg)$/i.test(file.name)) {
+            fileType = "image";
+        } else if (/\.(mp4|mov)$/i.test(file.name)) {
+            fileType = "video";
+        }
+
+        function fadeIn(id) {
+            if (!document.getElementById(id)) return;
+            let nowEle = document.getElementById(id);
+            nowEle.style.display = "";
+        }
+
+        function fadeOut(id) {
+            if (!document.getElementById(id)) return;
+            let nowEle = document.getElementById(id);
+            nowEle.style.display = "none";
+        }
+        fadeIn("lazy");
+        new AV.File(file.name, file).save().then((res) => {
+            let sourceMd = "";
+            if (fileType === "video") {
+                sourceMd = "<video controls width=\"100%\" height=\"auto\"><source src=\"" + res.attributes.url + "\"></video>";
+            } else if (fileType === "image") {
+                sourceMd = "![" + res.id + "](" + res.attributes.url + ")";
+            }
+            insertEmoji(sourceMd);
+            fadeOut("lazy");
+            fadeIn('shuoshuo_input');
+        }, (error) => {
+            fadeOut("lazy");
+            fadeIn('shuoshuo_input');
+            insertEmoji("保存失败，可能是文件无法被读取，或者上传过程中出现问题");
+            console.log("保存失败，可能是文件无法被读取，或者上传过程中出现问题", error)
+        });
+    }
+});
+
+// 自言自语查询软删除的数据
+(function(){
+    function fadeIn(id){
+        if(!document.getElementById(id)) return ;
+        let nowEle = document.getElementById(id);
+        nowEle.style.display = "";
+    }
+    
+    let TEMP_AV;
+    Object.defineProperty(window,"AV", {
+        set: function(arg) {
+            TEMP_AV = arg;
+            let oldQuery = TEMP_AV.Query;
+            TEMP_AV.Query = function() {
+                let oldValue = new oldQuery(...arguments);
+                oldValue.equalTo("deleteFlag", false);
+                return oldValue;
+            };
+            
+            let oldWithoutData = TEMP_AV.Object.createWithoutData;
+            TEMP_AV.Object.createWithoutData = function() {
+                let oldValue = new oldWithoutData(...arguments);
+                oldValue.destroy = function () {
+                    return new Promise((resolve, reject)=>{
+                        oldValue.set("deleteFlag", true);
+                        oldValue.save().then(() => {
+                            fadeIn("shade");
+                            fadeIn("shanchu");
+                            resolve();
+                        });
+                    });
+                };
+                return oldValue;
+            };
+        },
+        
+        get: function() {
+            return TEMP_AV;
+        }
+    })
+})();
+</script><!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="title" type="application/atom+xml">
+</head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src= "/img/loading.gif" data-lazy-src="/img/caoAvatars.svg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">45</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">29</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">21</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);" rel="external nofollow noreferrer"><i class="fa-fw fas fa-compass"></i><span> 目录</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li></ul></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);" rel="external nofollow noreferrer"><i class="fa-fw fa fa-heartbeat"></i><span> 娱乐</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page child" href="/books/"><i class="fa-fw fas fa-book"></i><span> 图书</span></a></li><li><a class="site-page child" href="/Gallery/"><i class="fa-fw fas fa-images"></i><span> 图库</span></a></li><li><a class="site-page child" href="/talking/"><i class="fa-fw fas fa-cubes"></i><span> 自言自語</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/messageboard/"><i class="fa-fw fas fa-comment-dots"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-thumbs-up"></i><span> 友情链接</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-9.png')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">title</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);" rel="external nofollow noreferrer"><i class="fa-fw fas fa-compass"></i><span> 目录</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li></ul></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);" rel="external nofollow noreferrer"><i class="fa-fw fa fa-heartbeat"></i><span> 娱乐</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page child" href="/books/"><i class="fa-fw fas fa-book"></i><span> 图书</span></a></li><li><a class="site-page child" href="/Gallery/"><i class="fa-fw fas fa-images"></i><span> 图库</span></a></li><li><a class="site-page child" href="/talking/"><i class="fa-fw fas fa-cubes"></i><span> 自言自語</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/messageboard/"><i class="fa-fw fas fa-comment-dots"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-thumbs-up"></i><span> 友情链接</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">解析spring是如何向beanFactory注册bean的<a class="post-edit-link" href="https://github.com/dongmaxiang/hexo/edit/master/source/_posts/java/2021-09-14-解析spring是如何向beanFactory注册bean的.markdown" rel="external nofollow noreferrer" title="编辑" target="_blank"><i class="fas fa-pencil-alt"></i></a></h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="fa-fw post-meta-icon far fa-calendar-alt"></i><span class="post-meta-label">发表于</span><time datetime="2021-09-19T03:47:56.000Z" title="发表于 2021-09-19 11:47:56">2021-09-19</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/java/">java</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/java/spring/">spring</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">2.4k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>10分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="解析spring是如何向beanFactory注册bean的"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p><big><strong>ConfigurationClassPostProcessor</strong></big><br>该类是一个BeanFactoryPostProcessor后置处理程序，其主要功能就是扫描beanFactory已注册的bean上的注解进而处理注解对应的职责<br>在<a href="/posts/springboot%E5%AE%B9%E5%99%A8%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B">spring的refresh阶段</a>调用<a href="/posts/springbeanfactory%E6%B5%81%E7%A8%8B%E8%A7%A3%E6%9E%90#4-%E8%B0%83%E7%94%A8beanfactorypostprocessors">beanFactoryPostProcessors</a>时该类才开始工作  </p>
+<blockquote>
+<p>在springContext初始化的时候通过<code>AnnotationConfigUtils#registerAnnotationConfigProcessors</code>向beanFactory注册该类  </p>
+</blockquote>
+<h1 id="工作流程"><a href="#工作流程" class="headerlink" title="工作流程"></a>工作流程</h1><span id="1-挨个挨个扫描beanfactory中的未扫描的bean"></span><h2 id="1-挨个挨个扫描beanFactory中的未扫描的bean"><a href="#1-挨个挨个扫描beanFactory中的未扫描的bean" class="headerlink" title="1. 挨个挨个扫描beanFactory中的未扫描的bean"></a>1. 挨个挨个扫描beanFactory中的未扫描的bean</h2><p>该类开始工作时，<a href="/posts/springboot%E5%AE%B9%E5%99%A8%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B#3-contextprepared--applicationcontextinitializedevent">main方法所在的类已注册到beanFactory中</a><br>先开始扫描main方法所在的类，并执行以下步骤2、3、4、5、6、7、8...等全部步骤，执行过程中会有新的bean注册到beanFactory中<br>然后再从beanFactory获取所有beanNames<code>getBeanDefinitionNames</code>,过滤未扫描的bean继续扫描，直到扫完为止  </p>
+<p>每扫一个bean执行完全部步骤之后都会</p>
+<blockquote>
+<ul>
+<li>执行在扫描期间扫描到的注解<a href="#deferredimportselector">@Import需延后执行的-DeferredImportSelector</a>现在立马执行  </li>
+<li>遍历<a href="#3-%E9%80%9A%E8%BF%87conditionevaluator%E5%88%A4%E6%96%AD%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E6%9D%A1%E4%BB%B6"><code>configurationClasses</code></a>，过滤已经解析过的，然后执行以下步骤  </li>
+</ul>
+<ol>
+<li>通过<code>ConditionEvaluator</code>判断是否满足注册条件(<small>在<code>ConfigurationPhase.REGISTER_BEAN</code>执行期间</small>)，不满足则return;</li>
+<li>如果是内嵌类、或者是<code>@Import</code>的类，则会被作为一个<code>@Configuration</code>注解的类，注册到beanFactory中(内嵌的类有其他注解则以其他注解优先，参考步骤2的注解)  </li>
+<li>注册扫描期间扫描到的@Bean注解的方法，会通过<code>ConditionEvaluator</code>判断是否满足条件(<small>在<code>ConfigurationPhase.REGISTER_BEAN</code>执行期间</small>)  </li>
+<li>执行扫描期间扫描到的<a href="#8-%E9%81%87%E5%88%B0importresource%E6%B3%A8%E8%A7%A3%E6%97%B6">@ImportResource对应的资源</a>现在进行资源的解析  </li>
+<li>执行在扫描期间扫描到的注解<a href="#importbeandefinitionregistrar">@Import需延后执行的-ImportBeanDefinitionRegistrar</a>现在立马执行 </li>
+</ol>
+</blockquote>
+<h2 id="2-如果class没有配置注解的话直接跳过"><a href="#2-如果class没有配置注解的话直接跳过" class="headerlink" title="2. 如果class没有配置注解的话直接跳过"></a>2. 如果class没有配置注解的话直接跳过</h2><p>必须有@Configuration<br>或@Component、@PropertySources、@ComponentScan、@Import、@ImportResource<br>或方法上有@Bean注解的<br>注解上包含以上注解的也可以---称之为复合注解（组合注解）  </p>
+<blockquote>
+<p>遇到class：BeanFactoryPostProcessor、BeanPostProcessor、AopInfrastructureBean、EventListenerFactory直接跳过</p>
+</blockquote>
+<span id="3-通过conditionevaluator判断是否满足条件"></span><h2 id="3-通过ConditionEvaluator判断是否满足条件"><a href="#3-通过ConditionEvaluator判断是否满足条件" class="headerlink" title="3. 通过ConditionEvaluator判断是否满足条件"></a>3. 通过<code>ConditionEvaluator</code>判断是否满足条件</h2><p>如果条件不满足(<small>在<code>ConfigurationPhase.PARSE_CONFIGURATION</code>期间</small>)则跳过，然后扫描下一个bean，继续从步骤1开始  </p>
+<blockquote>
+<p>如@ConditionOnBean、@ConditionOnClass、@ConditionMiss...等  </p>
+</blockquote>
+<p>条件满足则会判断是不是已经被扫描过，如果没有扫描则接着处理4、5、6。。。之后的全部步骤<br><strong><font color='red'>并把当前扫描的类保存到</font><code>configurationClasses</code><font color='red'>中</font></strong>  </p>
+<p>如果已经被扫描过，则优先处理非导入的，如果都是被导入的，则会合并  </p>
+<span id="4-遇到-component注解时优先处理内嵌的类继续循环2、3、4步骤"></span><h2 id="4-遇到-Component注解时优先处理内嵌的类继续循环2、3、4步骤"><a href="#4-遇到-Component注解时优先处理内嵌的类继续循环2、3、4步骤" class="headerlink" title="4. 遇到@Component注解时优先处理内嵌的类继续循环2、3、4步骤"></a>4. 遇到<code>@Component</code>注解时优先处理内嵌的类继续循环2、3、4步骤</h2><p>内嵌的类作为一个被导入的类</p>
+<span id="5-遇到-propertysources、-propertysource注解时处理配置文件并添加到environment中"></span><h2 id="5-遇到-PropertySources、-PropertySource注解时处理配置文件并添加到environment中"><a href="#5-遇到-PropertySources、-PropertySource注解时处理配置文件并添加到environment中" class="headerlink" title="5. 遇到@PropertySources、@PropertySource注解时处理配置文件并添加到environment中"></a>5. 遇到<code>@PropertySources、@PropertySource</code>注解时处理配置文件并添加到environment中</h2><span id="6-遇到-componentscans、-componentscan注解时扫描对应的basepackages或basepackageclasses"></span><h2 id="6-遇到-ComponentScans、-ComponentScan注解时扫描对应的basePackages或basePackageClasses"><a href="#6-遇到-ComponentScans、-ComponentScan注解时扫描对应的basePackages或basePackageClasses" class="headerlink" title="6. 遇到@ComponentScans、@ComponentScan注解时扫描对应的basePackages或basePackageClasses"></a>6. 遇到<code>@ComponentScans、@ComponentScan</code>注解时扫描对应的basePackages或basePackageClasses</h2><p>@ComponentScan扫描的class会注册到beanFactory中并且继续循环2、3、4、5、6的步骤，但必须满足以下几个条件  </p>
+<ul>
+<li>扫描指定的包下面所有的class时必须有@Component注解或者@ManagedBean  <blockquote>
+<p>该条件通过<code>ClassPathScanningCandidateComponentProvider#registerDefaultFilters</code>注册  </p>
+</blockquote>
+</li>
+<li>通过<a href="#2-%E9%80%9A%E8%BF%87conditionevaluator%E5%88%A4%E6%96%AD%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E6%9D%A1%E4%BB%B6"><code>ConditionEvaluator</code></a>判断是否可以注册到beanFactory中</li>
+<li>非接口、非abstract、并且为 top-level class or a nested class (static inner class),或者为abstract的类中必须有方法上是<code>@Lookup</code>注解的</li>
+<li>未往beanFactory注册过的</li>
+</ul>
+<span id="7-遇到-import注解时进行导入操作"></span><h2 id="7-遇到-Import注解时进行导入操作"><a href="#7-遇到-Import注解时进行导入操作" class="headerlink" title="7. 遇到@Import注解时进行导入操作"></a>7. 遇到<code>@Import</code>注解时进行导入操作</h2><p>@Import可以导入任何一个类，作为一个被导入的类，继续循环2、3、4、5、6、7的步骤,但是注意有三种类型比较特殊  </p>
+<blockquote>
+<p>在本步骤处理import时，不想相互import。例如：A import B，如果 B 在 import A就会报错</p>
+</blockquote>
+<span id="importselector"></span><h3 id="ImportSelector"><a href="#ImportSelector" class="headerlink" title="ImportSelector"></a>ImportSelector</h3><p>  此类型的实现通过调用selectImports获取import的类全名称(可以为多个)，挨个循环继续执行步骤7</p>
+<blockquote>
+<p>实现此类的有：<br>@EnableTransactionManagement-TransactionManagementConfigurationSelector-事务管理器<br>@EnableAsync-AsyncConfigurationSelector-开启异步<br>@EnableCaching-CachingConfigurationSelector-开启缓存  </p>
+</blockquote>
+<span id="deferredimportselector"></span><h3 id="DeferredImportSelector"><a href="#DeferredImportSelector" class="headerlink" title="DeferredImportSelector"></a>DeferredImportSelector</h3><p>  作用同ImportSelector，但是是延后处理，调用时机在<a href="#1-%E6%8C%A8%E4%B8%AA%E6%8C%A8%E4%B8%AA%E6%89%AB%E6%8F%8Fbeanfactory%E4%B8%AD%E7%9A%84%E6%9C%AA%E6%89%AB%E6%8F%8F%E7%9A%84bean">步骤1</a>扫描bean执行完全部的步骤之后才会调用  </p>
+<blockquote>
+<p>实现此类的有：<br>@EnableAutoConfiguration-AutoConfigurationImportSelector-开启自动配置<br>@ImportAutoConfiguration-ImportAutoConfigurationImportSelector-通过springSpi自定义具体的实现  </p>
+</blockquote>
+<span id="importbeandefinitionregistrar"></span><h3 id="ImportBeanDefinitionRegistrar"><a href="#ImportBeanDefinitionRegistrar" class="headerlink" title="ImportBeanDefinitionRegistrar"></a>ImportBeanDefinitionRegistrar</h3><p>  也是延后处理，调用时机在<a href="#1-%E6%8C%A8%E4%B8%AA%E6%8C%A8%E4%B8%AA%E6%89%AB%E6%8F%8Fbeanfactory%E4%B8%AD%E7%9A%84%E6%9C%AA%E6%89%AB%E6%8F%8F%E7%9A%84bean">步骤1</a>扫描bean执行完全部的步骤之后才会调用<br>  不同于<a href="#importselector">ImportSelector</a>此接口需要使用者自己往beanFactory注册bean，注册之前会有注解相关的信息供使用者使用  </p>
+<blockquote>
+<p>实现此类的有：<br>@EnableAspectJAutoProxy-AspectJAutoProxyRegistrar-aop拦截符合条件的类<br>@EnableConfigurationProperties-EnableConfigurationPropertiesRegistrar-配置实体和配置文件的映射（配置文件类）  </p>
+</blockquote>
+<span id="8-遇到-importresource注解时"></span><h2 id="8-遇到-ImportResource注解时"><a href="#8-遇到-ImportResource注解时" class="headerlink" title="8. 遇到@ImportResource注解时"></a>8. 遇到<code>@ImportResource</code>注解时</h2><p>  @ImportResource用来导入一个资源文件如早期的spring-application.xml的配置文件<br>  但是资源并不会立马解析，也是延后处理，调用时机也是在<a href="#1-%E6%8C%A8%E4%B8%AA%E6%8C%A8%E4%B8%AA%E6%89%AB%E6%8F%8Fbeanfactory%E4%B8%AD%E7%9A%84%E6%9C%AA%E6%89%AB%E6%8F%8F%E7%9A%84bean">步骤1</a>扫描bean执行完全部的步骤之后才会解析此资源</p>
+<span id="9-收集当前扫描的class中有-bean注解的方法-包含接口上有此注解的方法"></span><h2 id="9-收集当前扫描的class中有-Bean注解的方法-包含接口上有此注解的方法"><a href="#9-收集当前扫描的class中有-Bean注解的方法-包含接口上有此注解的方法" class="headerlink" title="9. 收集当前扫描的class中有@Bean注解的方法(包含接口上有此注解的方法)"></a>9. 收集当前扫描的class中有@Bean注解的方法(包含接口上有此注解的方法)</h2><span id="10-继续扫描当前class的父类，直到为object为止"></span><h2 id="10-继续扫描当前class的父类，直到为Object为止"><a href="#10-继续扫描当前class的父类，直到为Object为止" class="headerlink" title="10. 继续扫描当前class的父类，直到为Object为止"></a>10. 继续扫描当前class的父类，直到为Object为止</h2><p>继续从步骤2开始</p>
+<h1 id="代码流程"><a href="#代码流程" class="headerlink" title="代码流程"></a>代码流程</h1><h2 id="步骤1的代码"><a href="#步骤1的代码" class="headerlink" title="步骤1的代码"></a>步骤1的代码</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ConfigurationClassPostProcessor</span> <span class="keyword">implements</span> <span class="title">BeanDefinitionRegistryPostProcessor</span>, <span class="title">PriorityOrdered</span>, <span class="title">ResourceLoaderAware</span>, <span class="title">BeanClassLoaderAware</span>, <span class="title">EnvironmentAware</span> </span>&#123;</span><br><span class="line">  ...</span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processConfigBeanDefinitions</span><span class="params">(BeanDefinitionRegistry registry)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    ConfigurationClassParser parser = <span class="keyword">new</span> ConfigurationClassParser(</span><br><span class="line">            <span class="keyword">this</span>.metadataReaderFactory, <span class="keyword">this</span>.problemReporter, <span class="keyword">this</span>.environment,</span><br><span class="line">            <span class="keyword">this</span>.resourceLoader, <span class="keyword">this</span>.componentScanBeanNameGenerator, registry);</span><br><span class="line"></span><br><span class="line">    Set&lt;BeanDefinitionHolder&gt; candidates = <span class="keyword">new</span> LinkedHashSet&lt;&gt;(configCandidates);</span><br><span class="line">    Set&lt;ConfigurationClass&gt; alreadyParsed = <span class="keyword">new</span> HashSet&lt;&gt;(configCandidates.size());</span><br><span class="line">    <span class="keyword">do</span> &#123;</span><br><span class="line">      parser.parse(candidates);<span class="comment">//执行2、3、4、5、6 。。。全部步骤</span></span><br><span class="line">      parser.validate();<span class="comment">// 对于@Configuration的，类验证是否可以重写内部的方法</span></span><br><span class="line"></span><br><span class="line">      Set&lt;ConfigurationClass&gt; configClasses = <span class="keyword">new</span> LinkedHashSet&lt;&gt;(parser.getConfigurationClasses());</span><br><span class="line">      configClasses.removeAll(alreadyParsed);<span class="comment">// 过滤已经处理过的</span></span><br><span class="line"></span><br><span class="line">      <span class="comment">// Read the model and create bean definitions based on its content</span></span><br><span class="line">      <span class="keyword">if</span> (<span class="keyword">this</span>.reader == <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">this</span>.reader = <span class="keyword">new</span> ConfigurationClassBeanDefinitionReader(</span><br><span class="line">                registry, <span class="keyword">this</span>.sourceExtractor, <span class="keyword">this</span>.resourceLoader, <span class="keyword">this</span>.environment,</span><br><span class="line">                <span class="keyword">this</span>.importBeanNameGenerator, parser.getImportRegistry());</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// 步骤1当中的每一个bean，parse完之后都会做的步骤</span></span><br><span class="line">      <span class="keyword">this</span>.reader.loadBeanDefinitions(configClasses);</span><br><span class="line">      alreadyParsed.addAll(configClasses); <span class="comment">// 添加到已处理过的</span></span><br><span class="line"></span><br><span class="line">      candidates.clear();</span><br><span class="line">      <span class="comment">// 过滤未扫描的bean继续扫描，这一块spring开发人员写的不怎么样，阅读起来有点费劲</span></span><br><span class="line">      <span class="keyword">if</span> (registry.getBeanDefinitionCount() &gt; candidateNames.length) &#123;</span><br><span class="line">        String[] newCandidateNames = registry.getBeanDefinitionNames();</span><br><span class="line">        Set&lt;String&gt; oldCandidateNames = <span class="keyword">new</span> HashSet&lt;&gt;(Arrays.asList(candidateNames));</span><br><span class="line">        Set&lt;String&gt; alreadyParsedClasses = <span class="keyword">new</span> HashSet&lt;&gt;();</span><br><span class="line">        <span class="keyword">for</span> (ConfigurationClass configurationClass : alreadyParsed) &#123;</span><br><span class="line">          alreadyParsedClasses.add(configurationClass.getMetadata().getClassName());</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> (String candidateName : newCandidateNames) &#123;</span><br><span class="line">          <span class="keyword">if</span> (!oldCandidateNames.contains(candidateName)) &#123;</span><br><span class="line">            BeanDefinition bd = registry.getBeanDefinition(candidateName);</span><br><span class="line">            <span class="comment">// 如果class没有步骤2中注解的话直接跳过</span></span><br><span class="line">            <span class="keyword">if</span> (ConfigurationClassUtils.checkConfigurationClassCandidate(bd, <span class="keyword">this</span>.metadataReaderFactory) &amp;&amp;</span><br><span class="line">                    !alreadyParsedClasses.contains(bd.getBeanClassName())) &#123;</span><br><span class="line">              candidates.add(<span class="keyword">new</span> BeanDefinitionHolder(bd, candidateName));</span><br><span class="line">            &#125;</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        candidateNames = newCandidateNames;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">while</span> (!candidates.isEmpty());</span><br><span class="line">    ...</span><br><span class="line">  &#125;</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="步骤2的代码"><a href="#步骤2的代码" class="headerlink" title="步骤2的代码"></a>步骤2的代码</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">ConfigurationClassUtils</span> </span>&#123;</span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">checkConfigurationClassCandidate</span><span class="params">(BeanDefinition beanDef, MetadataReaderFactory metadataReaderFactory)</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    AnnotationMetadata metadata = <span class="comment">// 通过beanDef和metadataReaderFactory获取到metadata;</span></span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">// 如果是以下几种的class则至直接跳过，不解析</span></span><br><span class="line">    <span class="comment">// BeanFactoryPostProcessor、BeanPostProcessor、AopInfrastructureBean、EventListenerFactory</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 有@Configuration注解  </span></span><br><span class="line">    Map&lt;String, Object&gt; config = metadata.getAnnotationAttributes(Configuration.class.getName());</span><br><span class="line">    <span class="keyword">if</span> (config != <span class="keyword">null</span> &amp;&amp; !Boolean.FALSE.equals(config.get(<span class="string">&quot;proxyBeanMethods&quot;</span>))) &#123;</span><br><span class="line">      beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// isConfigurationCandidate: </span></span><br><span class="line">    <span class="comment">// 包含@Component、@PropertySources、@ComponentScan、@Import、@ImportResource</span></span><br><span class="line">    <span class="comment">// 或方法上有@Bean注解的</span></span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (config != <span class="keyword">null</span> || isConfigurationCandidate(metadata)) &#123;</span><br><span class="line">      beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">isConfigurationCandidate</span><span class="params">(AnnotationMetadata metadata)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (metadata.isInterface()) &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    Set&lt;String&gt; candidateIndicators = <span class="keyword">new</span> HashSet&lt;&gt;(<span class="number">8</span>);</span><br><span class="line">    candidateIndicators.add(Component.class.getName());</span><br><span class="line">    candidateIndicators.add(ComponentScan.class.getName());</span><br><span class="line">    candidateIndicators.add(Import.class.getName());</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">for</span> (String indicator : candidateIndicators) &#123;</span><br><span class="line">      <span class="keyword">if</span> (metadata.isAnnotated(indicator)) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="keyword">return</span> metadata.hasAnnotatedMethods(Bean.class.getName());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">catch</span> (Throwable ex) &#123;</span><br><span class="line">      ...  </span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="步骤3的代码"><a href="#步骤3的代码" class="headerlink" title="步骤3的代码"></a>步骤3的代码</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ConfigurationClassParser</span> </span>&#123;</span><br><span class="line">  ...</span><br><span class="line">  <span class="comment">// 当前类初始化的时候</span></span><br><span class="line">  <span class="keyword">this</span>.conditionEvaluator = <span class="keyword">new</span> ConditionEvaluator(registry, environment, resourceLoader);</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">processConfigurationClass</span><span class="params">(ConfigurationClass configClass, Predicate&lt;String&gt; filter)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="comment">// 在PARSE_CONFIGURATION期间判断是否满足条件</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">this</span>.conditionEvaluator.shouldSkip(configClass.getMetadata(), ConfigurationPhase.PARSE_CONFIGURATION)) &#123;</span><br><span class="line">      <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 如果已经处理过，则优先处理非导入的类，如果都是导入的。则合并导入的类</span></span><br><span class="line">    ConfigurationClass existingClass = <span class="keyword">this</span>.configurationClasses.get(configClass);</span><br><span class="line">    <span class="keyword">if</span> (existingClass != <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="keyword">if</span> (configClass.isImported()) &#123;</span><br><span class="line">        <span class="keyword">if</span> (existingClass.isImported()) &#123;</span><br><span class="line">          existingClass.mergeImportedBy(configClass);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// Otherwise ignore new imported config class; existing non-imported class overrides it.</span></span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// Explicit bean definition found, probably replacing an import.</span></span><br><span class="line">        <span class="comment">// Let&#x27;s remove the old one and go with the new one.</span></span><br><span class="line">        <span class="keyword">this</span>.configurationClasses.remove(configClass);</span><br><span class="line">        <span class="keyword">this</span>.knownSuperclasses.values().removeIf(configClass::equals);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Recursively process the configuration class and its superclass hierarchy.</span></span><br><span class="line">    SourceClass sourceClass = asSourceClass(configClass, filter);</span><br><span class="line">    <span class="keyword">do</span> &#123;</span><br><span class="line">      <span class="comment">// 执行4、5、6、7、8....等全部步骤</span></span><br><span class="line">      sourceClass = doProcessConfigurationClass(configClass, sourceClass, filter);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">while</span> (sourceClass != <span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">this</span>.configurationClasses.put(configClass, configClass);</span><br><span class="line">  &#125;</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="步骤4之后的代码"><a href="#步骤4之后的代码" class="headerlink" title="步骤4之后的代码"></a>步骤4之后的代码</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ConfigurationClassParser</span> </span>&#123;</span><br><span class="line">  ...</span><br><span class="line">  <span class="function"><span class="keyword">protected</span> <span class="keyword">final</span> SourceClass <span class="title">doProcessConfigurationClass</span><span class="params">(ConfigurationClass configClass, SourceClass sourceClass, Predicate&lt;String&gt; filter)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 处理内嵌的类</span></span><br><span class="line">    <span class="keyword">if</span> (configClass.getMetadata().isAnnotated(Component.class.getName())) &#123;</span><br><span class="line">      processMemberClasses(configClass, sourceClass, filter);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 步骤5的代码</span></span><br><span class="line">    <span class="keyword">for</span> (AnnotationAttributes propertySource : AnnotationConfigUtils.attributesForRepeatable(sourceClass.getMetadata(), </span><br><span class="line">            PropertySources.class, org.springframework.context.annotation.PropertySource.class)) &#123;</span><br><span class="line">      <span class="keyword">if</span> (<span class="keyword">this</span>.environment <span class="keyword">instanceof</span> ConfigurableEnvironment) &#123;</span><br><span class="line">        processPropertySource(propertySource);</span><br><span class="line">      &#125;</span><br><span class="line">      ...</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 步骤6的代码</span></span><br><span class="line">    Set&lt;AnnotationAttributes&gt; componentScans = AnnotationConfigUtils.attributesForRepeatable(sourceClass.getMetadata(), ComponentScans.class, ComponentScan.class);</span><br><span class="line">    <span class="keyword">if</span> (!componentScans.isEmpty() &amp;&amp; !<span class="keyword">this</span>.conditionEvaluator.shouldSkip(sourceClass.getMetadata(), ConfigurationPhase.REGISTER_BEAN)) &#123;</span><br><span class="line">      <span class="keyword">for</span> (AnnotationAttributes componentScan : componentScans) &#123;</span><br><span class="line">        <span class="comment">// The config class is annotated with @ComponentScan -&gt; perform the scan immediately</span></span><br><span class="line">        Set&lt;BeanDefinitionHolder&gt; scannedBeanDefinitions = <span class="keyword">this</span>.componentScanParser.parse(componentScan, sourceClass.getMetadata().getClassName());</span><br><span class="line">        <span class="comment">// Check the set of scanned definitions for any further config classes and parse recursively if needed</span></span><br><span class="line">        <span class="keyword">for</span> (BeanDefinitionHolder holder : scannedBeanDefinitions) &#123;</span><br><span class="line">          BeanDefinition bdCand = holder.getBeanDefinition().getOriginatingBeanDefinition();</span><br><span class="line">          <span class="keyword">if</span> (bdCand == <span class="keyword">null</span>) &#123;</span><br><span class="line">            bdCand = holder.getBeanDefinition();</span><br><span class="line">          &#125;</span><br><span class="line">          <span class="keyword">if</span> (ConfigurationClassUtils.checkConfigurationClassCandidate(bdCand, <span class="keyword">this</span>.metadataReaderFactory)) &#123;</span><br><span class="line">            parse(bdCand.getBeanClassName(), holder.getBeanName());</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 步骤7的代码</span></span><br><span class="line">    processImports(configClass, sourceClass, getImports(sourceClass), filter, <span class="keyword">true</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 步骤8的代码</span></span><br><span class="line">    AnnotationAttributes importResource = AnnotationConfigUtils.attributesFor(sourceClass.getMetadata(), ImportResource.class);</span><br><span class="line">    <span class="keyword">if</span> (importResource != <span class="keyword">null</span>) &#123;</span><br><span class="line">      String[] resources = importResource.getStringArray(<span class="string">&quot;locations&quot;</span>);</span><br><span class="line">      Class&lt;? extends BeanDefinitionReader&gt; readerClass = importResource.getClass(<span class="string">&quot;reader&quot;</span>);</span><br><span class="line">      <span class="keyword">for</span> (String resource : resources) &#123;</span><br><span class="line">        String resolvedResource = <span class="keyword">this</span>.environment.resolveRequiredPlaceholders(resource);</span><br><span class="line">        configClass.addImportedResource(resolvedResource, readerClass);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 步骤9的代码</span></span><br><span class="line">    Set&lt;MethodMetadata&gt; beanMethods = retrieveBeanMethodMetadata(sourceClass);</span><br><span class="line">    <span class="keyword">for</span> (MethodMetadata methodMetadata : beanMethods) &#123;</span><br><span class="line">      configClass.addBeanMethod(<span class="keyword">new</span> BeanMethod(methodMetadata, configClass));</span><br><span class="line">    &#125;</span><br><span class="line">    processInterfaces(configClass, sourceClass);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 步骤10的代码</span></span><br><span class="line">    <span class="keyword">if</span> (sourceClass.getMetadata().hasSuperClass()) &#123;</span><br><span class="line">      String superclass = sourceClass.getMetadata().getSuperClassName();</span><br><span class="line">      <span class="keyword">if</span> (superclass != <span class="keyword">null</span> &amp;&amp; !superclass.startsWith(<span class="string">&quot;java&quot;</span>) &amp;&amp; !<span class="keyword">this</span>.knownSuperclasses.containsKey(superclass)) &#123;</span><br><span class="line">        <span class="keyword">this</span>.knownSuperclasses.put(superclass, configClass);</span><br><span class="line">        <span class="comment">// Superclass found, return its annotation metadata and recurse</span></span><br><span class="line">        <span class="keyword">return</span> sourceClass.getSuperClass();</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// No superclass -&gt; processing is complete</span></span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>有兴趣的可以用IDE阅读源码一番，会有不一样的收获</p>
+</blockquote>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>ConfigurationClassPostProcessor的作用就是扫描类上的注解，继而处理注解对应的功能<br>@Component、@PropertySources、@ComponentScan、@Import、@ImportResource、方法上@Bean的注解都有不同的职责，都是由此类进行处理<br>从<a href="/posts/springboot%E5%AE%B9%E5%99%A8%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B#4-contextloaded--applicationpreparedevent">spring启动过程中的refresh</a>阶段对beanFactory的操作，到<a href="/posts/springbeanfactory%E6%B5%81%E7%A8%8B%E8%A7%A3%E6%9E%90#4-%E8%B0%83%E7%94%A8beanfactorypostprocessors">调用beanFactory的后置处理器</a><small>本文的实现</small>，大体对spring的整体流程有了个全新的概貌<br>此时、beanFactory也初始化、bean的定义也都注册了，接下来我们会<a href="/posts/spring%E5%AF%B9bean%E5%AE%9E%E4%BE%8B%E5%8C%96-%E5%88%9D%E5%A7%8B%E5%8C%96-%E6%B5%81%E7%A8%8B">分析bean的实例化流程</a></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined" rel="external nofollow noreferrer">author</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://dongmaxiang.vercel.app/posts/%E8%A7%A3%E6%9E%90spring%E6%98%AF%E5%A6%82%E4%BD%95%E5%90%91beanfactory%E6%B3%A8%E5%86%8Cbean%E7%9A%84/">https://dongmaxiang.vercel.app/posts/解析spring是如何向beanfactory注册bean的/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow noreferrer" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://dongmaxiang.vercel.app" target="_blank">title</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E6%BA%90%E7%A0%81/">源码</a><a class="post-meta__tags" href="/tags/spring/">spring</a></div><div class="post_share"><div class="social-share" data-image="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-9.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/photo/weChat.jpg" rel="external nofollow noreferrer" target="_blank"><img class="post-qr-code-img" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/photo/weChat.jpg" alt="微信"/></a><div class="post-qr-code-desc">微信</div></li><li class="reward-item"><a href="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/photo/aliPay.jpg" rel="external nofollow noreferrer" target="_blank"><img class="post-qr-code-img" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/photo/aliPay.jpg" alt="支付宝"/></a><div class="post-qr-code-desc">支付宝</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/posts/spring%E5%AF%B9bean%E5%AE%9E%E4%BE%8B%E5%8C%96-%E5%88%9D%E5%A7%8B%E5%8C%96-%E6%B5%81%E7%A8%8B/"><img class="prev-cover" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-5.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">spring对bean实例化-初始化-流程</div></div></a></div><div class="next-post pull-right"><a href="/posts/jvm%E6%89%80%E6%9C%89%E7%9A%84%E5%8F%82%E6%95%B0%E9%85%8D%E7%BD%AE%E8%AF%A6%E8%A7%A3/"><img class="next-cover" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-5.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">JVM所有的参数配置详解</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/posts/%E5%88%86%E6%9E%90spring%E7%9A%84environment%EF%BC%88%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%EF%BC%89%E7%9A%84%E5%8A%A0%E8%BD%BD/" title="分析spring的Environment（配置文件）的加载"><img class="cover" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-7.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-08-20</div><div class="title">分析spring的Environment（配置文件）的加载</div></div></a></div><div><a href="/posts/%E8%8E%B7%E5%8F%96spring%E5%90%AF%E5%8A%A8%E7%8E%AF%E5%A2%83%E7%9A%84%E5%B7%A5%E5%85%B7%E7%B1%BB/" title="获取spring启动环境的工具类"><img class="cover" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-7.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-08-21</div><div class="title">获取spring启动环境的工具类</div></div></a></div><div><a href="/posts/springboot%E5%AE%B9%E5%99%A8%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" title="springBoot容器启动流程"><img class="cover" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-5.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-08-22</div><div class="title">springBoot容器启动流程</div></div></a></div></div></div><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="twikoo-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E8%83%8C%E6%99%AF"><span class="toc-text">背景</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B"><span class="toc-text">工作流程</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E6%8C%A8%E4%B8%AA%E6%8C%A8%E4%B8%AA%E6%89%AB%E6%8F%8FbeanFactory%E4%B8%AD%E7%9A%84%E6%9C%AA%E6%89%AB%E6%8F%8F%E7%9A%84bean"><span class="toc-text">1. 挨个挨个扫描beanFactory中的未扫描的bean</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E5%A6%82%E6%9E%9Cclass%E6%B2%A1%E6%9C%89%E9%85%8D%E7%BD%AE%E6%B3%A8%E8%A7%A3%E7%9A%84%E8%AF%9D%E7%9B%B4%E6%8E%A5%E8%B7%B3%E8%BF%87"><span class="toc-text">2. 如果class没有配置注解的话直接跳过</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E9%80%9A%E8%BF%87ConditionEvaluator%E5%88%A4%E6%96%AD%E6%98%AF%E5%90%A6%E6%BB%A1%E8%B6%B3%E6%9D%A1%E4%BB%B6"><span class="toc-text">3. 通过ConditionEvaluator判断是否满足条件</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E9%81%87%E5%88%B0-Component%E6%B3%A8%E8%A7%A3%E6%97%B6%E4%BC%98%E5%85%88%E5%A4%84%E7%90%86%E5%86%85%E5%B5%8C%E7%9A%84%E7%B1%BB%E7%BB%A7%E7%BB%AD%E5%BE%AA%E7%8E%AF2%E3%80%813%E3%80%814%E6%AD%A5%E9%AA%A4"><span class="toc-text">4. 遇到@Component注解时优先处理内嵌的类继续循环2、3、4步骤</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E9%81%87%E5%88%B0-PropertySources%E3%80%81-PropertySource%E6%B3%A8%E8%A7%A3%E6%97%B6%E5%A4%84%E7%90%86%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E5%B9%B6%E6%B7%BB%E5%8A%A0%E5%88%B0environment%E4%B8%AD"><span class="toc-text">5. 遇到@PropertySources、@PropertySource注解时处理配置文件并添加到environment中</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E9%81%87%E5%88%B0-ComponentScans%E3%80%81-ComponentScan%E6%B3%A8%E8%A7%A3%E6%97%B6%E6%89%AB%E6%8F%8F%E5%AF%B9%E5%BA%94%E7%9A%84basePackages%E6%88%96basePackageClasses"><span class="toc-text">6. 遇到@ComponentScans、@ComponentScan注解时扫描对应的basePackages或basePackageClasses</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E9%81%87%E5%88%B0-Import%E6%B3%A8%E8%A7%A3%E6%97%B6%E8%BF%9B%E8%A1%8C%E5%AF%BC%E5%85%A5%E6%93%8D%E4%BD%9C"><span class="toc-text">7. 遇到@Import注解时进行导入操作</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#ImportSelector"><span class="toc-text">ImportSelector</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DeferredImportSelector"><span class="toc-text">DeferredImportSelector</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ImportBeanDefinitionRegistrar"><span class="toc-text">ImportBeanDefinitionRegistrar</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-%E9%81%87%E5%88%B0-ImportResource%E6%B3%A8%E8%A7%A3%E6%97%B6"><span class="toc-text">8. 遇到@ImportResource注解时</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#9-%E6%94%B6%E9%9B%86%E5%BD%93%E5%89%8D%E6%89%AB%E6%8F%8F%E7%9A%84class%E4%B8%AD%E6%9C%89-Bean%E6%B3%A8%E8%A7%A3%E7%9A%84%E6%96%B9%E6%B3%95-%E5%8C%85%E5%90%AB%E6%8E%A5%E5%8F%A3%E4%B8%8A%E6%9C%89%E6%AD%A4%E6%B3%A8%E8%A7%A3%E7%9A%84%E6%96%B9%E6%B3%95"><span class="toc-text">9. 收集当前扫描的class中有@Bean注解的方法(包含接口上有此注解的方法)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-%E7%BB%A7%E7%BB%AD%E6%89%AB%E6%8F%8F%E5%BD%93%E5%89%8Dclass%E7%9A%84%E7%88%B6%E7%B1%BB%EF%BC%8C%E7%9B%B4%E5%88%B0%E4%B8%BAObject%E4%B8%BA%E6%AD%A2"><span class="toc-text">10. 继续扫描当前class的父类，直到为Object为止</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%BB%A3%E7%A0%81%E6%B5%81%E7%A8%8B"><span class="toc-text">代码流程</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%AD%A5%E9%AA%A41%E7%9A%84%E4%BB%A3%E7%A0%81"><span class="toc-text">步骤1的代码</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%AD%A5%E9%AA%A42%E7%9A%84%E4%BB%A3%E7%A0%81"><span class="toc-text">步骤2的代码</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%AD%A5%E9%AA%A43%E7%9A%84%E4%BB%A3%E7%A0%81"><span class="toc-text">步骤3的代码</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%AD%A5%E9%AA%A44%E4%B9%8B%E5%90%8E%E7%9A%84%E4%BB%A3%E7%A0%81"><span class="toc-text">步骤4之后的代码</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-text">总结</span></a></li></ol></div></div></div></div></main><footer id="footer" style="background-image: url('https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-9.png')"><div id="footer-wrap"><div class="copyright">&copy;2022 By author</div><div class="footer_custom_text">千里之行始于足下</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"></div><div id="rightside-config-show"><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">本地搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div></div></div><div id="search-mask"></div></div><div><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly@4.0.1/source/js/utils.min.js"></script><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly@4.0.1/source/js/main.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><script src="https://cdn.jsdelivr.net/gh/jerryc127/butterfly.js.org/source/selfjs/localsearch.min.js?ver=4.0.0"></script><script>var preloader = {
+  endLoading: () => {
+    document.body.style.overflow = 'auto';
+    document.getElementById('loading-box').classList.add("loaded")
+  },
+  initLoading: () => {
+    document.body.style.overflow = '';
+    document.getElementById('loading-box').classList.remove("loaded")
+
+  }
+}
+window.addEventListener('load',preloader.endLoading())</script><div class="js-pjax"><script>(() => {
+  const $mermaidWrap = document.querySelectorAll('#article-container .mermaid-wrap')
+  if ($mermaidWrap.length) {
+    window.runMermaid = () => {
+      window.loadMermaid = true
+      const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+      Array.from($mermaidWrap).forEach((item, index) => {
+        const mermaidSrc = item.firstElementChild
+        const mermaidThemeConfig = '%%{init:{ \'theme\':\'' + theme + '\'}}%%\n'
+        const mermaidID = 'mermaid-' + index
+        const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+        mermaid.mermaidAPI.render(mermaidID, mermaidDefinition, (svgCode) => {
+          mermaidSrc.insertAdjacentHTML('afterend', svgCode)
+        })
+      })
+    }
+
+    const loadMermaid = () => {
+      window.loadMermaid ? runMermaid() : getScript('https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js').then(runMermaid)
+    }
+
+    window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+  }
+})()</script><script>(()=>{
+  const init = () => {
+    twikoo.init(Object.assign({
+      el: '#twikoo-wrap',
+      envId: 'https://twikoo1-two.vercel.app/',
+      region: '',
+      onCommentLoaded: function () {
+        btf.loadLightbox(document.querySelectorAll('#twikoo .tk-content img:not(.vemoji)'))
+      }
+    }, null))
+  }
+
+  const getCount = () => {
+    twikoo.getCommentsCount({
+      envId: 'https://twikoo1-two.vercel.app/',
+      region: '',
+      urls: [window.location.pathname],
+      includeReply: false
+    }).then(function (res) {
+      document.getElementById('twikoo-count').innerText = res[0].count
+    }).catch(function (err) {
+      console.error(err);
+    });
+  }
+
+  const runFn = () => {
+    init()
+    GLOBAL_CONFIG_SITE.isPost && getCount()
+  }
+
+  const loadTwikoo = () => {
+    if (typeof twikoo === 'object') {
+      setTimeout(runFn,0)
+      return
+    } 
+    getScript('https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js').then(runFn)
+  }
+
+  if ('Twikoo' === 'Twikoo' || !true) {
+    if (true) btf.loadComment(document.getElementById('twikoo-wrap'), loadTwikoo)
+    else loadTwikoo()
+  } else {
+    window.loadOtherComment = () => {
+      loadTwikoo()
+    }
+  }
+})()</script></div><script>window.addEventListener('load', () => {
+  const changeContent = (content) => {
+    if (content === '') return content
+
+    content = content.replace(/<img.*?src="(.*?)"?[^\>]+>/ig, '[图片]') // replace image link
+    content = content.replace(/<a[^>]+?href=["']?([^"']+)["']?[^>]*>([^<]+)<\/a>/gi, '[链接]') // replace url
+    content = content.replace(/<pre><code>.*?<\/pre>/gi, '[代码]') // replace code
+    content = content.replace(/<[^>]+>/g,"") // remove html tag
+
+    if (content.length > 150) {
+      content = content.substring(0,150) + '...'
+    }
+    return content
+  }
+
+  const getComment = () => {
+    const runTwikoo = () => {
+      twikoo.getRecentComments({
+        envId: 'https://twikoo1-two.vercel.app/',
+        region: '',
+        pageSize: 6,
+        includeReply: true
+      }).then(function (res) {
+        const twikooArray = res.map(e => {
+          return {
+            'content': changeContent(e.comment),
+            'avatar': e.avatar,
+            'nick': e.nick,
+            'url': e.url + '#' + e.id,
+            'date': new Date(e.created).toISOString()
+          }
+        })
+
+        saveToLocal.set('twikoo-newest-comments', JSON.stringify(twikooArray), 5/(60*24))
+        generateHtml(twikooArray)
+      }).catch(function (err) {
+        const $dom = document.querySelector('#card-newest-comments .aside-list')
+        $dom.innerHTML= "无法获取评论，请确认相关配置是否正确"
+      })
+    }
+
+    if (typeof twikoo === 'object') {
+      runTwikoo()
+    } else {
+      getScript('https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js').then(runTwikoo)
+    }
+  }
+
+  const generateHtml = array => {
+    let result = ''
+
+    if (array.length) {
+      for (let i = 0; i < array.length; i++) {
+        result += '<div class=\'aside-list-item\'>'
+
+        if (true) {
+          const name = 'data-lazy-src'
+          result += `<a href='${array[i].url}' class='thumbnail'><img ${name}='${array[i].avatar}' alt='${array[i].nick}'></a>`
+        }
+        
+        result += `<div class='content'>
+        <a class='comment' href='${array[i].url}' title='${array[i].content}'>${array[i].content}</a>
+        <div class='name'><span>${array[i].nick} / </span><time datetime="${array[i].date}">${btf.diffDate(array[i].date, true)}</time></div>
+        </div></div>`
+      }
+    } else {
+      result += '没有评论'
+    }
+
+    let $dom = document.querySelector('#card-newest-comments .aside-list')
+    $dom.innerHTML= result
+    window.lazyLoadInstance && window.lazyLoadInstance.update()
+    window.pjax && window.pjax.refresh($dom)
+  }
+
+  const newestCommentInit = () => {
+    if (document.querySelector('#card-newest-comments .aside-list')) {
+      const data = saveToLocal.get('twikoo-newest-comments')
+      if (data) {
+        generateHtml(JSON.parse(data))
+      } else {
+        getComment()
+      }
+    }
+  }
+
+  newestCommentInit()
+  document.addEventListener('pjax:complete', newestCommentInit)
+})</script><div class="aplayer no-destroy" data-id="7342827202" data-server="netease" data-type="playlist" data-fixed="true" data-autoplay="true"> </div><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-fluttering-ribbon.min.js"></script><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/activate-power-mode.min.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+POWERMODE.mobile = true;
+document.body.addEventListener('input', POWERMODE);
+</script><script id="click-show-text" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/click-show-text.min.js" data-mobile="false" data-text="富强,民主,文明,和谐,自由,平等,公正,法治,爱国,敬业,诚信,友善" data-fontsize="15px" data-random="false" async="async"></script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/gh/metowolf/MetingJS@1.2/dist/Meting.min.js"></script><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js"></script><script>let pjaxSelectors = ["title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+var pjax = new Pjax({
+  elements: 'a:not([target="_blank"])',
+  selectors: pjaxSelectors,
+  cacheBust: false,
+  analytics: true,
+  scrollRestoration: false
+})
+
+document.addEventListener('pjax:send', function () {
+
+  // removeEventListener scroll 
+  window.tocScrollFn && window.removeEventListener('scroll', window.tocScrollFn)
+  window.scrollCollect && window.removeEventListener('scroll', scrollCollect)
+
+  typeof preloader === 'object' && preloader.initLoading()
+  document.getElementById('rightside').style.cssText = "opacity: ''; transform: ''"
+  
+  if (window.aplayers) {
+    for (let i = 0; i < window.aplayers.length; i++) {
+      if (!window.aplayers[i].options.fixed) {
+        window.aplayers[i].destroy()
+      }
+    }
+  }
+
+  typeof typed === 'object' && typed.destroy()
+
+  //reset readmode
+  const $bodyClassList = document.body.classList
+  $bodyClassList.contains('read-mode') && $bodyClassList.remove('read-mode')
+
+})
+
+document.addEventListener('pjax:complete', function () {
+  window.refreshFn()
+
+  document.querySelectorAll('script[data-pjax]').forEach(item => {
+    const newScript = document.createElement('script')
+    const content = item.text || item.textContent || item.innerHTML || ""
+    Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+    newScript.appendChild(document.createTextNode(content))
+    item.parentNode.replaceChild(newScript, item)
+  })
+
+  GLOBAL_CONFIG.islazyload && window.lazyLoadInstance.update()
+
+  typeof chatBtnFn === 'function' && chatBtnFn()
+  typeof panguInit === 'function' && panguInit()
+
+  // google analytics
+  typeof gtag === 'function' && gtag('config', 'G-RPEPZKPQGQ', {'page_path': window.location.pathname});
+
+  // baidu analytics
+  typeof _hmt === 'object' && _hmt.push(['_trackPageview',window.location.pathname]);
+
+  typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+
+  // prismjs
+  typeof Prism === 'object' && Prism.highlightAll()
+
+  typeof preloader === 'object' && preloader.endLoading()
+})
+
+document.addEventListener('pjax:error', (e) => {
+  if (e.request.status === 404) {
+    pjax.loadUrl('/404.html')
+  }
+})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><!-- hexo injector body_end start --><script data-pjax>
+if (GLOBAL_CONFIG_SITE.isPost && document.getElementById(decodeURI(location.hash.replace('#', '')))){
+    setTimeout(function self(){
+        let nextFrame;
+        document.getAnimations().forEach(function (item){
+            if (item.animationName === 'bottom-top'){
+                nextFrame = true;
+            }
+        });
+        if (nextFrame){
+            setTimeout(self, 0);
+            return;
+        }
+        btf.scrollToDest(btf.getEleTop(document.getElementById(decodeURI(location.hash.replace('#', '')))), 300);
+    }, 0);
+}
+</script><script class="js-pjax">
+
+document.querySelectorAll('a[href^="#"]:not([href="#"])').forEach(function (a){
+    a.addEventListener('click', function (e){
+        e.preventDefault();
+        e.stopPropagation();
+        window.history.pushState(null, null, this.hash);
+        btf.scrollToDest(btf.getEleTop(document.getElementById(decodeURI(a.hash.replace('#', '')))), 300);
+    });
+});
+
+!function (){
+    if (!GLOBAL_CONFIG_SITE.isToc){
+        return;
+    }
+    let toc = document.getElementById('mobile-toc-button');
+    if (!toc){
+        return;
+    }
+    
+    let tocHeadline = document.getElementsByClassName("item-headline")[0];
+    
+    tocHeadline.querySelectorAll('*').forEach(function (item){
+        item.style.cursor = 'pointer';
+        item.onmouseover = function(){
+            tocHeadline.style.fontWeight = "bold"; 
+        };
+        item.onmouseout = function(){
+            tocHeadline.style.fontWeight = ""; 
+        };
+        item.addEventListener('click', function (){
+            tocHeadline.nextElementSibling.classList.toggle('is-expand')
+        });
+    });
+    
+    let fa_close = document.createElement("i");
+    fa_close.style.cursor = 'pointer';
+    fa_close.classList.add("fa");
+    fa_close.classList.add("fa-close");
+    fa_close.addEventListener('click', function (){
+        toc.click();
+    });
+    tocHeadline.appendChild(fa_close);
+    
+    // 如果offsetParent不存在，说明此元素被隐藏，不是小屏设备
+    // if (!toc.offsetParent) {
+    //     return;
+    // }
+    
+    // 打开toc
+    setTimeout(function self(){
+        // 等待该组件加载完成
+        if (!window.mobileToc || !window.mobileToc.open){
+            setTimeout(self, 0);
+            return;
+        }
+        window.mobileToc.open();
+    }, 0);
+    
+    // 点击目录并不会自动关闭，只有重复点击才会关闭toc
+    Array.from(document.getElementsByClassName("toc") || []).forEach(function(item){
+        item.addEventListener('click', function (e){
+            e.preventDefault();
+            e.stopPropagation();
+            let active = document.querySelector('.toc-link.active');
+            if(active === e.target || active === e.target.parentElement) { 
+                window.mobileToc.close();
+                return;
+            }
+            const $target = e.target.classList.contains('toc-link') ? e.target : e.target.parentElement;
+            btf.scrollToDest(btf.getEleTop(document.getElementById(decodeURI($target.hash).replace('#', ''))), 300);
+        });
+    });
+}();
+</script><!-- hexo injector body_end end --></body></html>

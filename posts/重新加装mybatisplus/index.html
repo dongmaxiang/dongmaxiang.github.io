@@ -1,0 +1,676 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><!-- hexo injector head_begin start --><script>
+(function(){
+    if (location.host.indexOf('github') > -1){
+        location.href = 'https://dongmaxiang.vercel.app' + location.pathname;
+    }
+})(); 
+</script><!-- hexo injector head_begin end --><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>重新加装MybatisPlus | title</title><meta name="keywords" content="mybatis,mybatisPlus"><meta name="author" content="author"><meta name="copyright" content="author"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="1.字段填充器注意重写了strictFill方法统一规范，字段填充的值和类型所有的表都一样。所以不作类型判断。 1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253@Componentpublic class FieldAutoFillHandler imp">
+<meta property="og:type" content="article">
+<meta property="og:title" content="重新加装MybatisPlus">
+<meta property="og:url" content="https://dongmaxiang.vercel.app/posts/%E9%87%8D%E6%96%B0%E5%8A%A0%E8%A3%85mybatisplus/">
+<meta property="og:site_name" content="title">
+<meta property="og:description" content="1.字段填充器注意重写了strictFill方法统一规范，字段填充的值和类型所有的表都一样。所以不作类型判断。 1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253@Componentpublic class FieldAutoFillHandler imp">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-5.png">
+<meta property="article:published_time" content="2021-08-19T05:20:21.000Z">
+<meta property="article:modified_time" content="2021-08-19T05:20:21.000Z">
+<meta property="article:author" content="author">
+<meta property="article:tag" content="mybatis">
+<meta property="article:tag" content="mybatisPlus">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-5.png"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://dongmaxiang.vercel.app/posts/%E9%87%8D%E6%96%B0%E5%8A%A0%E8%A3%85mybatisplus/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//www.google-analytics.com" crossorigin=""/><link rel="preconnect" href="//hm.baidu.com"/><link rel="preconnect" href="//fonts.googleapis.com" crossorigin=""/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="google-site-verification" content="uKCYPhzuOQS6R9c8ZI9OAbvmoeObhrmxe-U6Ijl_YPY"/><meta name="baidu-site-verification" content="code-RSipQpNIZM"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?dde0ff961302057974d83940aa88c02f";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script><script async="async" src="https://www.googletagmanager.com/gtag/js?id=G-RPEPZKPQGQ"></script><script>window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-RPEPZKPQGQ');
+</script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Titillium+Web&amp;display=swap" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.json","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":200},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: true,
+    post: true
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: author","link":"链接: ","source":"来源: title","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: true,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '重新加装MybatisPlus',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2021-08-19 13:20:21'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+          const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+          const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+          const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+          if (t === undefined) {
+            if (isLightMode) activateLightMode()
+            else if (isDarkMode) activateDarkMode()
+            else if (isNotSpecified || hasNoSupport) {
+              const now = new Date()
+              const hour = now.getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><!-- hexo injector head_end start -->
+<link rel="stylesheet" href="/css/custom.css">
+<script>
+window.Traditionalized = (arg) => arg;
+</script><script>
+// 自言自语支持上传图片
+addEventListener("load", function() {
+    if (!window["atEvery"]) {
+        return;
+    }
+    let judgeSystem_ = Client.prototype.judgeSystem;
+    Client.prototype.judgeSystem = function (){
+        judgeSystem_.apply(this, arguments);
+        if (!this.system.name){
+            this.system.name = navigator.platform;
+        }
+    };
+    atEvery.prototype.beginUpload = function(file) {
+        function Show() {
+            fadeIn("shade");
+            fadeIn("shuoshuo-modal");
+        }
+        let currentUser = AV.User.current();
+        if (currentUser) { /* console.log(currentUser); */ } else { /* document.getElementById("logw").innerHTML= "<center><pre><code>" + text15 + "</code></pre></center>"; */
+            Show();
+            return;
+        }
+        if (!/\.(jpg|gif|jpeg|ico|png|svg|mp4|mov)$/i.test(file.name)) {
+            alert("不支持的文件类型，支持的文件格式有jpg|gif|jpeg|ico|png|svg|mp4|mov");
+            return;
+        }
+        let fileType = "";
+        let sourceSize = (file.size / 1024).toFixed(0);
+        let sourceSizeLimit = 1024 * 50;
+        if (sourceSize > sourceSizeLimit) {
+            alert("资源上传最大限制为50M");
+            return;
+        }
+        if (/\.(jpg|gif|jpeg|ico|png|svg)$/i.test(file.name)) {
+            fileType = "image";
+        } else if (/\.(mp4|mov)$/i.test(file.name)) {
+            fileType = "video";
+        }
+
+        function fadeIn(id) {
+            if (!document.getElementById(id)) return;
+            let nowEle = document.getElementById(id);
+            nowEle.style.display = "";
+        }
+
+        function fadeOut(id) {
+            if (!document.getElementById(id)) return;
+            let nowEle = document.getElementById(id);
+            nowEle.style.display = "none";
+        }
+        fadeIn("lazy");
+        new AV.File(file.name, file).save().then((res) => {
+            let sourceMd = "";
+            if (fileType === "video") {
+                sourceMd = "<video controls width=\"100%\" height=\"auto\"><source src=\"" + res.attributes.url + "\"></video>";
+            } else if (fileType === "image") {
+                sourceMd = "![" + res.id + "](" + res.attributes.url + ")";
+            }
+            insertEmoji(sourceMd);
+            fadeOut("lazy");
+            fadeIn('shuoshuo_input');
+        }, (error) => {
+            fadeOut("lazy");
+            fadeIn('shuoshuo_input');
+            insertEmoji("保存失败，可能是文件无法被读取，或者上传过程中出现问题");
+            console.log("保存失败，可能是文件无法被读取，或者上传过程中出现问题", error)
+        });
+    }
+});
+
+// 自言自语查询软删除的数据
+(function(){
+    function fadeIn(id){
+        if(!document.getElementById(id)) return ;
+        let nowEle = document.getElementById(id);
+        nowEle.style.display = "";
+    }
+    
+    let TEMP_AV;
+    Object.defineProperty(window,"AV", {
+        set: function(arg) {
+            TEMP_AV = arg;
+            let oldQuery = TEMP_AV.Query;
+            TEMP_AV.Query = function() {
+                let oldValue = new oldQuery(...arguments);
+                oldValue.equalTo("deleteFlag", false);
+                return oldValue;
+            };
+            
+            let oldWithoutData = TEMP_AV.Object.createWithoutData;
+            TEMP_AV.Object.createWithoutData = function() {
+                let oldValue = new oldWithoutData(...arguments);
+                oldValue.destroy = function () {
+                    return new Promise((resolve, reject)=>{
+                        oldValue.set("deleteFlag", true);
+                        oldValue.save().then(() => {
+                            fadeIn("shade");
+                            fadeIn("shanchu");
+                            resolve();
+                        });
+                    });
+                };
+                return oldValue;
+            };
+        },
+        
+        get: function() {
+            return TEMP_AV;
+        }
+    })
+})();
+</script><!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="title" type="application/atom+xml">
+</head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src= "/img/loading.gif" data-lazy-src="/img/caoAvatars.svg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">45</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">29</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">21</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);" rel="external nofollow noreferrer"><i class="fa-fw fas fa-compass"></i><span> 目录</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li></ul></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);" rel="external nofollow noreferrer"><i class="fa-fw fa fa-heartbeat"></i><span> 娱乐</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page child" href="/books/"><i class="fa-fw fas fa-book"></i><span> 图书</span></a></li><li><a class="site-page child" href="/Gallery/"><i class="fa-fw fas fa-images"></i><span> 图库</span></a></li><li><a class="site-page child" href="/talking/"><i class="fa-fw fas fa-cubes"></i><span> 自言自語</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/messageboard/"><i class="fa-fw fas fa-comment-dots"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-thumbs-up"></i><span> 友情链接</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-5.png')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">title</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);" rel="external nofollow noreferrer"><i class="fa-fw fas fa-compass"></i><span> 目录</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li></ul></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);" rel="external nofollow noreferrer"><i class="fa-fw fa fa-heartbeat"></i><span> 娱乐</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page child" href="/books/"><i class="fa-fw fas fa-book"></i><span> 图书</span></a></li><li><a class="site-page child" href="/Gallery/"><i class="fa-fw fas fa-images"></i><span> 图库</span></a></li><li><a class="site-page child" href="/talking/"><i class="fa-fw fas fa-cubes"></i><span> 自言自語</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/messageboard/"><i class="fa-fw fas fa-comment-dots"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-thumbs-up"></i><span> 友情链接</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">重新加装MybatisPlus<a class="post-edit-link" href="https://github.com/dongmaxiang/hexo/edit/master/source/_posts/java/2021-08-19-重新加装MybatisPlus.markdown" rel="external nofollow noreferrer" title="编辑" target="_blank"><i class="fas fa-pencil-alt"></i></a></h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="fa-fw post-meta-icon far fa-calendar-alt"></i><span class="post-meta-label">发表于</span><time datetime="2021-08-19T05:20:21.000Z" title="发表于 2021-08-19 13:20:21">2021-08-19</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/java/">java</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/java/mybatis/">mybatis</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">3.4k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>16分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="重新加装MybatisPlus"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="1-字段填充器"><a href="#1-字段填充器" class="headerlink" title="1.字段填充器"></a>1.字段填充器</h1><p>注意重写了<code>strictFill</code>方法<br>统一规范，字段填充的值和类型所有的表都一样。所以不作类型判断。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FieldAutoFillHandler</span> <span class="keyword">implements</span> <span class="title">MetaObjectHandler</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">insertFill</span><span class="params">(MetaObject metaObject)</span> </span>&#123;</span><br><span class="line">        User user = CurrentUser.getCurrentUser();</span><br><span class="line"></span><br><span class="line">        <span class="keyword">this</span>.strictInsertFill(metaObject, <span class="string">&quot;deleteFlag&quot;</span>, <span class="keyword">null</span>, DeleteFlag.N);</span><br><span class="line">        <span class="keyword">this</span>.strictInsertFill(metaObject, <span class="string">&quot;isDelete&quot;</span>, <span class="keyword">null</span>, DeleteFlag.N);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">this</span>.strictInsertFill(metaObject, <span class="string">&quot;createUserId&quot;</span>, <span class="keyword">null</span>, user.getUserId());</span><br><span class="line">        <span class="keyword">this</span>.strictInsertFill(metaObject, <span class="string">&quot;creatorUserId&quot;</span>, <span class="keyword">null</span>, user.getUserId());</span><br><span class="line"></span><br><span class="line">        <span class="keyword">this</span>.strictInsertFill(metaObject, <span class="string">&quot;createUserName&quot;</span>, <span class="keyword">null</span>, user.getUserName());</span><br><span class="line">        <span class="keyword">this</span>.strictInsertFill(metaObject, <span class="string">&quot;creatorUserName&quot;</span>, <span class="keyword">null</span>, user.getUserName());</span><br><span class="line"></span><br><span class="line">        <span class="keyword">this</span>.strictInsertFill(metaObject, <span class="string">&quot;createTime&quot;</span>, <span class="keyword">null</span>, LocalDateTime.now());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">updateFill</span><span class="params">(MetaObject metaObject)</span> </span>&#123;</span><br><span class="line">        User user = CurrentUser.getCurrentUser();</span><br><span class="line"></span><br><span class="line">        <span class="keyword">this</span>.strictUpdateFill(metaObject, <span class="string">&quot;updateTime&quot;</span>, <span class="keyword">null</span>, LocalDateTime.now());</span><br><span class="line">        <span class="keyword">this</span>.strictUpdateFill(metaObject, <span class="string">&quot;updateUserId&quot;</span>, <span class="keyword">null</span>, user.getUserId());</span><br><span class="line">        <span class="keyword">this</span>.strictUpdateFill(metaObject, <span class="string">&quot;updateUserName&quot;</span>, <span class="keyword">null</span>, user.getUserName());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 重写自动填充的逻辑</span></span><br><span class="line"><span class="comment">     * 只要有该字段、且字段为空、则填充</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> MetaObjectHandler <span class="title">strictFill</span><span class="params">(<span class="keyword">boolean</span> insertFill, TableInfo tableInfo, MetaObject metaObject, List&lt;StrictFill&gt; strictFills)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        strictFills.forEach(i -&gt; &#123;</span><br><span class="line">            <span class="keyword">final</span> String fieldName = i.getFieldName();</span><br><span class="line">            <span class="keyword">if</span> (!metaObject.hasSetter(fieldName)) &#123;</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (metaObject.getValue(fieldName) != <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            Object value = i.getFieldVal().get();</span><br><span class="line">            <span class="keyword">if</span> (value == <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            metaObject.setValue(fieldName, value);</span><br><span class="line">        &#125;);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h2><ul>
+<li>最终调用了<code>insertFill</code>或者<code>updateFill</code>    <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 调用MybatisPlus 的 ibatis代码</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseStatementHandler</span> <span class="keyword">implements</span> <span class="title">StatementHandler</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="title">BaseStatementHandler</span><span class="params">(Executor executor, MappedStatement mappedStatement, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql)</span> </span>&#123;</span><br><span class="line">        。。。</span><br><span class="line">        <span class="comment">// 就是在这里调用了MybatisPlus的填充逻辑</span></span><br><span class="line">        <span class="keyword">this</span>.parameterHandler = configuration.newParameterHandler(mappedStatement, parameterObject, boundSql);</span><br><span class="line">        。。。</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// MybatisPlus的参数处理程序</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MybatisDefaultParameterHandler</span> <span class="keyword">extends</span> <span class="title">DefaultParameterHandler</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> TypeHandlerRegistry typeHandlerRegistry;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> MappedStatement mappedStatement;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Object parameterObject;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> BoundSql boundSql;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Configuration configuration;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">MybatisDefaultParameterHandler</span><span class="params">(MappedStatement mappedStatement, Object parameterObject, BoundSql boundSql)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// processParameter 处理参数</span></span><br><span class="line">        <span class="keyword">super</span>(mappedStatement, processParameter(mappedStatement, parameterObject), boundSql);</span><br><span class="line">        。。。</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">static</span> Object <span class="title">processParameter</span><span class="params">(MappedStatement ms, Object parameterObject)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (parameterObject != <span class="keyword">null</span> &amp;&amp;</span><br><span class="line">            (SqlCommandType.INSERT == ms.getSqlCommandType() || SqlCommandType.UPDATE == ms.getSqlCommandType())</span><br><span class="line">        ) &#123;</span><br><span class="line">            。。。</span><br><span class="line">            Collection&lt;Object&gt; parameters = getParameters(parameterObject);</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">null</span> != parameters) &#123;</span><br><span class="line">                parameters.forEach(obj -&gt; process(ms, obj));</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                process(ms, parameterObject);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> parameterObject;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">process</span><span class="params">(MappedStatement ms, Object parameterObject)</span> </span>&#123;</span><br><span class="line">        TableInfo tableInfo;</span><br><span class="line">        ...</span><br><span class="line">        <span class="keyword">if</span> (tableInfo != <span class="keyword">null</span>) &#123;</span><br><span class="line">            MetaObject metaObject = ms.getConfiguration().newMetaObject(entity);</span><br><span class="line">            <span class="keyword">if</span> (SqlCommandType.INSERT == ms.getSqlCommandType()) &#123;</span><br><span class="line">                populateKeys(tableInfo, metaObject, entity);</span><br><span class="line">                <span class="comment">// 最终填充</span></span><br><span class="line">                insertFill(metaObject, tableInfo);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="comment">// 最终填充</span></span><br><span class="line">                updateFill(metaObject, tableInfo);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h1 id="2-批量-单个-软删除使自动填充器生效（默认不生效）"><a href="#2-批量-单个-软删除使自动填充器生效（默认不生效）" class="headerlink" title="2.[批量|单个]软删除使自动填充器生效（默认不生效）"></a>2.[批量|单个]软删除使自动填充器生效（默认不生效）</h1><p>mybatisPlus 使用<code>@TableLogic</code>注解在字段上，表示当前表软删除，当前字段为软删除字段<br>正常调用删除的API即可软删除。但是缺点是：并不会使字段填充器生效<br>目前我用的3.3.2有单个的软删除使字段填充器生效，但是批量的没有<br>批量软删除参考批量删除的方法  </p>
+<ul>
+<li>mybatisPlus在初始化的时候会给每个表添加通用的Statement映射</li>
+<li>批量软删除需要再加一个参数，总共两个参数，一个是实体(不然字段填充器往哪里填？)，一个是删除的idList集合，所以需要从新定义一个方法</li>
+</ul>
+<h2 id="自定义批量软删除的代码"><a href="#自定义批量软删除的代码" class="headerlink" title="自定义批量软删除的代码"></a>自定义批量软删除的代码</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// mapper新增一个方法</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">deleteBatchIdsWithFill</span><span class="params">(<span class="meta">@Param(Constants.ENTITY)</span> T t, <span class="meta">@Param(Constants.COLLECTION)</span> Collection&lt;? extends Serializable&gt; idList)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 具体statement实现</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LogicBatchDeleteWithFill</span> <span class="keyword">extends</span> <span class="title">AbstractMethod</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// mapper的方法名</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String MAPPER_METHOD = <span class="string">&quot;deleteBatchIdsWithFill&quot;</span>;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> MappedStatement <span class="title">injectMappedStatement</span><span class="params">(Class&lt;?&gt; mapperClass, Class&lt;?&gt; modelClass, TableInfo tableInfo)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 如果表不是逻辑删除，则复用SqlMethod.DELETE_BATCH_BY_IDS</span></span><br><span class="line">        <span class="keyword">if</span> (!tableInfo.isLogicDelete()) &#123;</span><br><span class="line">            String sql = String.format(SqlMethod.DELETE_BATCH_BY_IDS.getSql()</span><br><span class="line">                    , tableInfo.getTableName()</span><br><span class="line">                    , tableInfo.getKeyColumn()</span><br><span class="line">                    , SqlScriptUtils.convertForeach(<span class="string">&quot;#&#123;item&#125;&quot;</span>, Constants.COLLECTION, <span class="keyword">null</span>, <span class="string">&quot;item&quot;</span>, COMMA)</span><br><span class="line">            );</span><br><span class="line">            SqlSource sqlSource = languageDriver.createSqlSource(configuration, sql, Object.class);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>.addDeleteMappedStatement(mapperClass, MAPPER_METHOD, sqlSource);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 引用批量删除的sql</span></span><br><span class="line">        SqlMethod sqlMethod = SqlMethod.LOGIC_DELETE_BATCH_BY_IDS;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 找出是需要记录更新的字段</span></span><br><span class="line">        List&lt;TableFieldInfo&gt; fieldInfos = tableInfo.getFieldList().stream()</span><br><span class="line">                .filter(TableFieldInfo::isWithUpdateFill)</span><br><span class="line">                .collect(toList());</span><br><span class="line">        String sql;</span><br><span class="line">        <span class="keyword">if</span> (CollectionUtils.isNotEmpty(fieldInfos)) &#123;</span><br><span class="line">            <span class="comment">// 这里是重点，把mapper新定义的方法第一个参数作为前缀，把需要更新的字段拼到sql中</span></span><br><span class="line">            String sqlSet = <span class="string">&quot;SET &quot;</span> + fieldInfos.stream().map(i -&gt; i.getSqlSet(Constants.ENTITY_DOT)).collect(joining(EMPTY))</span><br><span class="line">                    + tableInfo.getLogicDeleteSql(<span class="keyword">false</span>, <span class="keyword">false</span>);</span><br><span class="line">            sql = String.format(sqlMethod.getSql()</span><br><span class="line">                    , tableInfo.getTableName()</span><br><span class="line">                    , sqlSet, tableInfo.getKeyColumn()</span><br><span class="line">                    , SqlScriptUtils.convertForeach(<span class="string">&quot;#&#123;item&#125;&quot;</span>, Constants.COLLECTION, <span class="keyword">null</span>, <span class="string">&quot;item&quot;</span>, COMMA)</span><br><span class="line">                    , tableInfo.getLogicDeleteSql(<span class="keyword">true</span>, <span class="keyword">true</span>)</span><br><span class="line">            );</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            sql = String.format(sqlMethod.getSql()</span><br><span class="line">                    , tableInfo.getTableName()</span><br><span class="line">                    , sqlLogicSet(tableInfo)</span><br><span class="line">                    , tableInfo.getKeyColumn()</span><br><span class="line">                    , SqlScriptUtils.convertForeach(<span class="string">&quot;#&#123;item&#125;&quot;</span>, Constants.COLLECTION, <span class="keyword">null</span>, <span class="string">&quot;item&quot;</span>, COMMA)</span><br><span class="line">                    , tableInfo.getLogicDeleteSql(<span class="keyword">true</span>, <span class="keyword">true</span>)</span><br><span class="line">            );</span><br><span class="line">        &#125;</span><br><span class="line">        SqlSource sqlSource = languageDriver.createSqlSource(configuration, sql, modelClass);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.addUpdateMappedStatement(mapperClass, modelClass, MAPPER_METHOD, sqlSource);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<span id="最后需要把sql映射的工具类添加到spring容器中哦"></span><h2 id="最后需要把sql映射的工具类添加到Spring容器中哦"><a href="#最后需要把sql映射的工具类添加到Spring容器中哦" class="headerlink" title="最后需要把sql映射的工具类添加到Spring容器中哦"></a>最后需要把sql映射的工具类添加到Spring容器中哦</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"> <span class="meta">@Bean</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> AbstractSqlInjector <span class="title">customSqlMethod</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    List&lt;AbstractMethod&gt; allMethodList = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">    <span class="comment">//单个删除withFillApi（3.3.2自带）</span></span><br><span class="line">    allMethodList.add(<span class="keyword">new</span> LogicDeleteByIdWithFill());</span><br><span class="line">    <span class="comment">//批量删除withFillApi</span></span><br><span class="line">    allMethodList.add(<span class="keyword">new</span> LogicBatchDeleteWithFill());</span><br><span class="line">    <span class="comment">// 默认的api</span></span><br><span class="line">    allMethodList.addAll(<span class="keyword">new</span> DefaultSqlInjector().getMethodList(<span class="keyword">null</span>));</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> AbstractSqlInjector() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> List&lt;AbstractMethod&gt; <span class="title">getMethodList</span><span class="params">(Class&lt;?&gt; mapperClass)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> allMethodList;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>使用的话一定要使用mapper新定义的方法哦</p>
+</blockquote>
+<p>大功告成</p>
+<span id="3-mybatisplus查询软删除的数据"></span><h1 id="3-MybatisPlus查询软删除的数据"><a href="#3-MybatisPlus查询软删除的数据" class="headerlink" title="3.MybatisPlus查询软删除的数据"></a>3.MybatisPlus查询软删除的数据</h1><p>批量软删除，我们已经完美的实现，字段填充器也可以生效。但有些业务需要查询已经删除的数据，mybatisPlus目前还没有对应的方法，只能自己实现了。</p>
+<h2 id="首先定义方法到mapper里面"><a href="#首先定义方法到mapper里面" class="headerlink" title="首先定义方法到mapper里面"></a>首先定义方法到mapper里面</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">// BaseDomain是我们数据库实体的父类</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">CustomBaseMapper</span>&lt;<span class="title">T</span> <span class="keyword">extends</span> <span class="title">BaseDomain</span>&lt;? <span class="keyword">extends</span> <span class="title">Serializable</span>&gt;&gt; <span class="keyword">extends</span> <span class="title">BaseMapper</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 查询数据忽略已经删除的数据</span></span><br><span class="line"><span class="comment">     * ps: 如果有逻辑删除的话</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function">List&lt;T&gt; <span class="title">selectListIgnoreDeleted</span><span class="params">(<span class="meta">@Param(Constants.WRAPPER)</span> Wrapper&lt;T&gt; wrapper)</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 查询数据忽略已经删除的数据</span></span><br><span class="line"><span class="comment">     * ps: 如果有逻辑删除的话</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function">T <span class="title">selectOneIgnoreDeleted</span><span class="params">(<span class="meta">@Param(Constants.WRAPPER)</span> Wrapper&lt;T&gt; wrapper)</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 根据 ID 查询忽略已经删除的数据</span></span><br><span class="line"><span class="comment">     * ps: 如果有逻辑删除的话</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function">T <span class="title">selectByIdIgnoreDeleted</span><span class="params">(Serializable id)</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 查询（根据ID 批量查询）忽略已经删除的数据</span></span><br><span class="line"><span class="comment">     * ps: 如果有逻辑删除的话</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function">List&lt;T&gt; <span class="title">selectBatchIdsIgnoreDeleted</span><span class="params">(<span class="meta">@Param(Constants.COLLECTION)</span> Collection&lt;? extends Serializable&gt; idList)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="然后定义这些个方法的实现"><a href="#然后定义这些个方法的实现" class="headerlink" title="然后定义这些个方法的实现"></a>然后定义这些个方法的实现</h2><p><strong>有用动态代理啊<a href="/posts/javautil%E5%8A%A8%E6%80%81%E4%BB%A3%E7%90%86">动态代理</a></strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 查询单个时忽略已删除的数据</span></span><br><span class="line"><span class="comment"> * ps:如果有逻辑删除的话</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">SelectOneIgnoreDeleted</span> <span class="keyword">extends</span> <span class="title">AbstractMethod</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String MAPPER_METHOD = <span class="string">&quot;selectOneIgnoreDeleted&quot;</span>;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> MappedStatement <span class="title">injectMappedStatement</span><span class="params">(Class&lt;?&gt; mapperClass, Class&lt;?&gt; modelClass, TableInfo tableInfo)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// DynamicProxy为本文的动态代理</span></span><br><span class="line">        <span class="comment">// 和源码最重要的不同点是，这里直接忽略逻辑删除 </span></span><br><span class="line">        TableInfo ignoreDeleteLogic = <span class="keyword">new</span> DynamicProxy&lt;&gt;(tableInfo, Object.class)</span><br><span class="line">                .getProxy((target, proxyMethod, args, originMethod) -&gt; &#123;</span><br><span class="line">                    <span class="comment">// 忽略逻辑删除</span></span><br><span class="line">                    <span class="keyword">if</span> (originMethod.getName().equals(<span class="string">&quot;isLogicDelete&quot;</span>)) &#123;</span><br><span class="line">                        <span class="comment">// 直接返回false</span></span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">return</span> proxyMethod.invoke(target, args);</span><br><span class="line">                &#125;);</span><br><span class="line"></span><br><span class="line">        String formatted = String.format(SqlMethod.SELECT_ONE.getSql()</span><br><span class="line">                , sqlFirst()</span><br><span class="line">                , sqlSelectColumns(tableInfo, <span class="keyword">true</span>)</span><br><span class="line">                , tableInfo.getTableName()</span><br><span class="line">                , sqlWhereEntityWrapper(<span class="keyword">true</span>, ignoreDeleteLogic)</span><br><span class="line">                , sqlComment()</span><br><span class="line">        );</span><br><span class="line"></span><br><span class="line">        SqlSource sqlSource = languageDriver.createSqlSource(configuration, formatted, modelClass);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.addSelectMappedStatementForTable(mapperClass, MAPPER_METHOD, sqlSource, tableInfo);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 查询单个id时忽略已删除的数据</span></span><br><span class="line"><span class="comment"> * ps:如果有逻辑删除的话</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">SelectByIdIgnoreDeleted</span> <span class="keyword">extends</span> <span class="title">AbstractMethod</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String MAPPER_METHOD = <span class="string">&quot;selectByIdIgnoreDeleted&quot;</span>;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> MappedStatement <span class="title">injectMappedStatement</span><span class="params">(Class&lt;?&gt; mapperClass, Class&lt;?&gt; modelClass, TableInfo tableInfo)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        String formatted = String.format(SqlMethod.SELECT_BY_ID.getSql()</span><br><span class="line">                , sqlSelectColumns(tableInfo, <span class="keyword">false</span>)</span><br><span class="line">                , tableInfo.getTableName(), tableInfo.getKeyColumn(), tableInfo.getKeyProperty()</span><br><span class="line">                <span class="comment">// 和源码最重要的不同点是这里不拼接逻辑删除的sql</span></span><br><span class="line">                , EMPTY</span><br><span class="line">        );</span><br><span class="line"></span><br><span class="line">        SqlSource sqlSource = <span class="keyword">new</span> RawSqlSource(configuration, formatted, Object.class);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.addSelectMappedStatementForTable(mapperClass, MAPPER_METHOD, sqlSource, tableInfo);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 查询多个id时忽略已删除的数据</span></span><br><span class="line"><span class="comment"> * ps:如果有逻辑删除的话</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">SelectBatchByIdsIgnoreDeleted</span> <span class="keyword">extends</span> <span class="title">AbstractMethod</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String MAPPER_METHOD = <span class="string">&quot;selectBatchIdsIgnoreDeleted&quot;</span>;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> MappedStatement <span class="title">injectMappedStatement</span><span class="params">(Class&lt;?&gt; mapperClass, Class&lt;?&gt; modelClass, TableInfo tableInfo)</span> </span>&#123;</span><br><span class="line">        String sqlFormatted = String.format(SqlMethod.SELECT_BATCH_BY_IDS.getSql()</span><br><span class="line">                , sqlSelectColumns(tableInfo, <span class="keyword">false</span>)</span><br><span class="line">                , tableInfo.getTableName()</span><br><span class="line">                , tableInfo.getKeyColumn()</span><br><span class="line">                , SqlScriptUtils.convertForeach(<span class="string">&quot;#&#123;item&#125;&quot;</span>, COLLECTION, <span class="keyword">null</span>, <span class="string">&quot;item&quot;</span>, COMMA)</span><br><span class="line">                <span class="comment">// 和源码最重要的不同点是这里不拼接逻辑删除的sql</span></span><br><span class="line">                , EMPTY</span><br><span class="line">        );</span><br><span class="line">        SqlSource sqlSource = languageDriver.createSqlSource(configuration, sqlFormatted, Object.class);</span><br><span class="line">        <span class="keyword">return</span> addSelectMappedStatementForTable(mapperClass, MAPPER_METHOD, sqlSource, tableInfo);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 查询列表时忽略已删除的数据</span></span><br><span class="line"><span class="comment"> * ps:如果有逻辑删除的话</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">SelectListIgnoreDeleted</span> <span class="keyword">extends</span> <span class="title">AbstractMethod</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String MAPPER_METHOD = <span class="string">&quot;selectListIgnoreDeleted&quot;</span>;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> MappedStatement <span class="title">injectMappedStatement</span><span class="params">(Class&lt;?&gt; mapperClass, Class&lt;?&gt; modelClass, TableInfo tableInfo)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 和源码最重要的不同点是，这里直接忽略逻辑删除</span></span><br><span class="line">        TableInfo ignoreDeleteLogic = <span class="keyword">new</span> DynamicProxy&lt;&gt;(tableInfo, Object.class)</span><br><span class="line">                .getProxy((target, proxyMethod, args, originMethod) -&gt; &#123;</span><br><span class="line">                    <span class="keyword">if</span> (originMethod.getName().equals(<span class="string">&quot;isLogicDelete&quot;</span>)) &#123;</span><br><span class="line">                        <span class="comment">// 直接返回false</span></span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">return</span> proxyMethod.invoke(target, args);</span><br><span class="line">                &#125;);</span><br><span class="line"></span><br><span class="line">        String sql = String.format(SqlMethod.SELECT_LIST.getSql()</span><br><span class="line">                , sqlFirst()</span><br><span class="line">                , sqlSelectColumns(tableInfo, <span class="keyword">true</span>)</span><br><span class="line">                , tableInfo.getTableName()</span><br><span class="line">                , sqlWhereEntityWrapper(<span class="keyword">true</span>, ignoreDeleteLogic)</span><br><span class="line">                , sqlComment()</span><br><span class="line">        );</span><br><span class="line"></span><br><span class="line">        SqlSource sqlSource = languageDriver.createSqlSource(configuration, sql, modelClass);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.addSelectMappedStatementForTable(mapperClass, MAPPER_METHOD, sqlSource, tableInfo);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="绑定statement"><a href="#绑定statement" class="headerlink" title="绑定statement"></a>绑定statement</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="meta">@Bean</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> AbstractSqlInjector <span class="title">customSqlMethod</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    List&lt;AbstractMethod&gt; allMethodList = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">    <span class="comment">// 默认的api</span></span><br><span class="line">    allMethodList.addAll(<span class="keyword">new</span> DefaultSqlInjector().getMethodList(<span class="keyword">null</span>));</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 新增的api</span></span><br><span class="line">    List&lt;AbstractMethod&gt; methodList = Stream.of(</span><br><span class="line">            <span class="keyword">new</span> SelectByIdIgnoreDeleted(),</span><br><span class="line">            <span class="keyword">new</span> SelectBatchByIdsIgnoreDeleted(),</span><br><span class="line">            <span class="keyword">new</span> SelectOneIgnoreDeleted(),</span><br><span class="line">            <span class="keyword">new</span> SelectListIgnoreDeleted()</span><br><span class="line">    ).collect(toList());</span><br><span class="line"></span><br><span class="line">    allMethodList.addAll(allMethodList);</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> AbstractSqlInjector() &#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> List&lt;AbstractMethod&gt; <span class="title">getMethodList</span><span class="params">(Class&lt;?&gt; mapperClass)</span> </span>&#123;</span><br><span class="line">                <span class="keyword">return</span> allMethodList;</span><br><span class="line">            &#125;</span><br><span class="line">    &#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>至此完成SQL的statement绑定，然后具体业务继承CustomBaseMapper即可享用啦</p>
+<h1 id="4-避免字符串编码"><a href="#4-避免字符串编码" class="headerlink" title="4.避免字符串编码"></a>4.避免字符串编码</h1><p>lambda语法已经帮我们解决了字符串编码的问题，但是非lambda的api，他的参数只支持接受字符串，那么我们如何避免字符串呢？<br>参考<a href="/posts/mybatisplus%E5%88%86%E6%9E%90lambda%E8%AF%AD%E6%B3%95%E5%8E%9F%E7%90%86">Lambda转字符串</a>
+我们也可以自定义lambda转字符串</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * api获取字段名</span></span><br><span class="line"><span class="comment"> * 避免面向字符串编程</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; <span class="function">String <span class="title">cts</span><span class="params">(SFunction&lt;T, ?&gt; column)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> columnToString(column);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; <span class="function">String <span class="title">columnToString</span><span class="params">(SFunction&lt;T, ?&gt; column)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// mybatisPlus自带的api</span></span><br><span class="line">    SerializedLambda resolve = LambdaUtils.resolve(column);</span><br><span class="line">    <span class="keyword">return</span> org.apache.ibatis.reflection.property.PropertyNamer.methodToProperty(resolve.getImplMethodName());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这样我们在其他地方也可以用lambda转字段的语法了</p>
+<h1 id="5-避免空指针，使api操作更安全"><a href="#5-避免空指针，使api操作更安全" class="headerlink" title="5.避免空指针，使api操作更安全"></a>5.避免空指针，使api操作更安全</h1><p>集成以上所有的特性到一个类中作为一个baseDao。<br>实际项目中一个表对应一个实体，一个mapper，当然也需要一个Dao，继承此Dao就可以顺心的使用了。<br>我们Dao的职责就是用来拼接sql的。避免sql东一处西一处，不好维护。强制校验把sql写在Dao类中👉<a href="/posts/mybatisplus%E8%AF%AD%E6%B3%95%E7%B3%96%E7%9A%84%E6%A0%A1%E9%AA%8C">MybatisPlus语法糖的校验</a>
+然后service的业务代码，调用Dao写好的sql即可。<strong>service层不关心sql</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 和业务无关，所有数据库表的Dao继承此类</span></span><br><span class="line"><span class="comment"> * manger基类 （ 泛型：M 是 mapper 对象，T 是数据库实体 ）</span></span><br><span class="line"><span class="comment"> * 1：修改原有的api，使api操作更安全</span></span><br><span class="line"><span class="comment"> * 2：逻辑删除时使用填充删除</span></span><br><span class="line"><span class="comment"> * 3: lambda转换成字段名，可以随时随地用啦</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseDao</span>&lt;<span class="title">M</span> <span class="keyword">extends</span> <span class="title">CustomBaseMapper</span>&lt;<span class="title">T</span>&gt;, <span class="title">T</span> <span class="keyword">extends</span> <span class="title">BaseDomain</span>&lt;? <span class="keyword">extends</span> <span class="title">Serializable</span>&gt;&gt; <span class="keyword">extends</span> <span class="title">ServiceImpl</span>&lt;<span class="title">M</span>, <span class="title">T</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 简写方法名</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; <span class="function">String <span class="title">cts_</span><span class="params">(SFunction&lt;T, ?&gt; column)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> columnToStringUnderline(column);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * api获取字段名并且驼峰变下划线</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> &lt;T&gt; <span class="function">String <span class="title">columnToStringUnderline</span><span class="params">(SFunction&lt;T, ?&gt; column)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> StringUtils.camelToUnderline(columnToString(column));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 简写方法名</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; <span class="function">String <span class="title">cts</span><span class="params">(SFunction&lt;T, ?&gt; column)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> columnToString(column);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * api获取字段名</span></span><br><span class="line"><span class="comment">     * 避免面向字符串编程</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> &lt;T&gt; <span class="function">String <span class="title">columnToString</span><span class="params">(SFunction&lt;T, ?&gt; column)</span> </span>&#123;</span><br><span class="line">        SerializedLambda resolve = LambdaUtils.resolve(column);</span><br><span class="line">        <span class="keyword">return</span> PropertyNamer.methodToProperty(resolve.getImplMethodName());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Class&lt;T&gt; entityClass = currentModelClass();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 增加统一校验id的方法</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> T <span class="title">checkId</span><span class="params">(Serializable id)</span> <span class="keyword">throws</span> BizException </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> checkId(id, <span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> T <span class="title">checkId</span><span class="params">(Serializable id, <span class="keyword">boolean</span> ignoreDeleted)</span> <span class="keyword">throws</span> BizException </span>&#123;</span><br><span class="line">        T byId = ignoreDeleted ? getByIdIgnoreDeleted(id) : getById(id);</span><br><span class="line">        <span class="keyword">if</span> (byId == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> BizException(<span class="string">&quot;数据：&quot;</span> + id + <span class="string">&quot;不存在&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> byId;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">     * 如果条件为空一律返回null，禁止抛出异常</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> T <span class="title">getById</span><span class="params">(Serializable id)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (id == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.getById(id);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> T <span class="title">getByIdIgnoreDeleted</span><span class="params">(Serializable id)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (id == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> getBaseMapper().selectByIdIgnoreDeleted(id);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 调用软删除</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">removeById</span><span class="params">(Serializable id)</span> </span>&#123;</span><br><span class="line">        T baseDomain = BeanUtils.instantiateClass(entityClass);</span><br><span class="line">        <span class="comment">//noinspection unchecked</span></span><br><span class="line">        ((BaseDomain&lt;Serializable&gt;) baseDomain).setId(id);</span><br><span class="line">        <span class="keyword">return</span> SqlHelper.retBool(getBaseMapper().deleteByIdWithFill(baseDomain));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">removeByIds</span><span class="params">(Collection&lt;? extends Serializable&gt; idList)</span> </span>&#123;</span><br><span class="line">        T t = BeanUtils.instantiateClass(entityClass);</span><br><span class="line">        <span class="keyword">return</span> SqlHelper.retBool(getBaseMapper().deleteBatchIdsWithFill(t, idList));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 所有的list 如果条件为空一律返回空的list</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> List&lt;T&gt; <span class="title">listByIds</span><span class="params">(Collection&lt;? extends Serializable&gt; idList)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (CollectionUtils.isEmpty(idList)) &#123;</span><br><span class="line">            <span class="keyword">return</span> Collections.emptyList();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.listByIds(idList);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 所有的list 如果条件为空一律返回空的list</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> List&lt;T&gt; <span class="title">listByIdsIgnoreDeleted</span><span class="params">(Collection&lt;? extends Serializable&gt; idList)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (CollectionUtils.isEmpty(idList)) &#123;</span><br><span class="line">            <span class="keyword">return</span> Collections.emptyList();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> getBaseMapper().selectBatchIdsIgnoreDeleted(idList);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> T <span class="title">getOneIgnoreDeleted</span><span class="params">(Wrapper&lt;T&gt; queryWrapper)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> getOneIgnoreDeleted(queryWrapper, <span class="keyword">true</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 根据 Wrapper，查询一条记录</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> T <span class="title">getOneIgnoreDeleted</span><span class="params">(Wrapper&lt;T&gt; queryWrapper, <span class="keyword">boolean</span> throwEx)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (throwEx) &#123;</span><br><span class="line">            <span class="keyword">return</span> getBaseMapper().selectOneIgnoreDeleted(queryWrapper);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> SqlHelper.getObject(log, getBaseMapper().selectListIgnoreDeleted(queryWrapper));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 查询条件忽略已经删除的数据(如果是逻辑删除的话)</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> LambdaQueryChainWrapper&lt;T&gt; <span class="title">lambdaQueryIgnoreDeleted</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> LambdaQueryChainWrapper&lt;T&gt;(getBaseMapper()) &#123;</span><br><span class="line">            <span class="keyword">boolean</span> haveNullValueOfIn = <span class="keyword">false</span>;<span class="comment">// in条件是否有空的list</span></span><br><span class="line"></span><br><span class="line">            &#123;</span><br><span class="line">                <span class="keyword">super</span>.wrapperChildren = <span class="keyword">new</span> LambdaQueryWrapper&lt;T&gt;() &#123;</span><br><span class="line">                    <span class="comment">// 为空则不添加此条件</span></span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> LambdaQueryWrapper&lt;T&gt; <span class="title">in</span><span class="params">(<span class="keyword">boolean</span> condition, SFunction&lt;T, ?&gt; column, Collection&lt;?&gt; coll)</span> </span>&#123;</span><br><span class="line">                        <span class="keyword">if</span> (CollectionUtils.isEmpty(coll)) &#123;</span><br><span class="line">                            haveNullValueOfIn = <span class="keyword">true</span>;<span class="comment">// true，直接返回，不增加这个in条件</span></span><br><span class="line">                            <span class="keyword">return</span> typedThis;</span><br><span class="line">                        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                            <span class="keyword">return</span> <span class="keyword">super</span>.in(condition, column, coll);</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> List&lt;T&gt; <span class="title">list</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                <span class="keyword">if</span> (haveNullValueOfIn) &#123;</span><br><span class="line">                    <span class="keyword">return</span> Collections.emptyList();</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="comment">// 调用忽略逻辑删除的列表api</span></span><br><span class="line">                <span class="keyword">return</span> BaseDao.<span class="keyword">this</span>.getBaseMapper().selectListIgnoreDeleted(wrapperChildren);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * LambdaQuery中，条件有in，并且条件为空，一律返回空的list</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> LambdaQueryChainWrapper&lt;T&gt; <span class="title">lambdaQuery</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> LambdaQueryChainWrapper&lt;T&gt;(getBaseMapper()) &#123;</span><br><span class="line">            <span class="keyword">boolean</span> haveNullValueOfIn = <span class="keyword">false</span>;<span class="comment">// in条件是否有空的list</span></span><br><span class="line"></span><br><span class="line">            &#123;</span><br><span class="line">                <span class="keyword">super</span>.wrapperChildren = <span class="keyword">new</span> LambdaQueryWrapper&lt;T&gt;() &#123;</span><br><span class="line">                    <span class="comment">// 为空则不添加此条件</span></span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> LambdaQueryWrapper&lt;T&gt; <span class="title">in</span><span class="params">(<span class="keyword">boolean</span> condition, SFunction&lt;T, ?&gt; column, Collection&lt;?&gt; coll)</span> </span>&#123;</span><br><span class="line">                        <span class="keyword">if</span> (CollectionUtils.isEmpty(coll)) &#123;</span><br><span class="line">                            haveNullValueOfIn = <span class="keyword">true</span>;<span class="comment">// true，直接返回，不增加这个in条件</span></span><br><span class="line">                            <span class="keyword">return</span> typedThis;</span><br><span class="line">                        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                            <span class="keyword">return</span> <span class="keyword">super</span>.in(condition, column, coll);</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> List&lt;T&gt; <span class="title">list</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                <span class="keyword">if</span> (haveNullValueOfIn) &#123;</span><br><span class="line">                    <span class="keyword">return</span> Collections.emptyList();</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">super</span>.list();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * query中，条件有且只有一个in，并且条件为空，一律返回空的list</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> QueryChainWrapper&lt;T&gt; <span class="title">query</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> QueryChainWrapper&lt;T&gt;(getBaseMapper()) &#123;</span><br><span class="line">            <span class="comment">// in条件是否有空的list</span></span><br><span class="line">            <span class="keyword">boolean</span> haveNullValueOfIn = <span class="keyword">false</span>;</span><br><span class="line">            <span class="comment">// 只有in的条件</span></span><br><span class="line">            <span class="keyword">boolean</span> onlyInCondition = <span class="keyword">true</span>;</span><br><span class="line"></span><br><span class="line">            &#123;</span><br><span class="line">                <span class="keyword">super</span>.wrapperChildren = <span class="keyword">new</span> QueryWrapper&lt;T&gt;() &#123;</span><br><span class="line">                    <span class="comment">// 为空则不添加此条件</span></span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> QueryWrapper&lt;T&gt; <span class="title">in</span><span class="params">(<span class="keyword">boolean</span> condition, String column, Collection&lt;?&gt; coll)</span> </span>&#123;</span><br><span class="line">                        <span class="keyword">if</span> (CollectionUtils.isEmpty(coll)) &#123;</span><br><span class="line">                            haveNullValueOfIn = <span class="keyword">true</span>;<span class="comment">// true，直接返回，不增加这个in条件</span></span><br><span class="line">                            <span class="keyword">return</span> typedThis;</span><br><span class="line">                        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                            <span class="keyword">return</span> <span class="keyword">super</span>.in(condition, column, coll);</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">protected</span> QueryWrapper&lt;T&gt; <span class="title">doIt</span><span class="params">(<span class="keyword">boolean</span> condition, ISqlSegment... sqlSegments)</span> </span>&#123;</span><br><span class="line">                        onlyInCondition = <span class="keyword">false</span>;<span class="comment">// 此方法执行代表有其他的条件</span></span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">super</span>.doIt(condition, sqlSegments);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> List&lt;T&gt; <span class="title">list</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                <span class="keyword">if</span> (onlyInCondition &amp;&amp; haveNullValueOfIn) &#123;</span><br><span class="line">                    <span class="keyword">return</span> Collections.emptyList();</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">super</span>.list();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><ol>
+<li>配置字段填充器<br>省去无关记录用户的操作</li>
+<li>批量软删除使字段填充器删除时也生效  </li>
+<li>查询已经删除的数据  </li>
+<li>避免字符串编程  </li>
+<li>避免空指针异常  </li>
+</ol>
+<p>mybatisPlus 虽然能开箱即用，但是如果没有更完善的配置，用起来也会不是特别的方便。这些特性配置完事之后，按照每个特性的使用步骤来。
+可以节省我们开发人员很多的代码量。以及省去了很多不需要关系的东西。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined" rel="external nofollow noreferrer">author</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://dongmaxiang.vercel.app/posts/%E9%87%8D%E6%96%B0%E5%8A%A0%E8%A3%85mybatisplus/">https://dongmaxiang.vercel.app/posts/重新加装mybatisplus/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow noreferrer" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://dongmaxiang.vercel.app" target="_blank">title</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/mybatis/">mybatis</a><a class="post-meta__tags" href="/tags/mybatisPlus/">mybatisPlus</a></div><div class="post_share"><div class="social-share" data-image="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-5.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/photo/weChat.jpg" rel="external nofollow noreferrer" target="_blank"><img class="post-qr-code-img" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/photo/weChat.jpg" alt="微信"/></a><div class="post-qr-code-desc">微信</div></li><li class="reward-item"><a href="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/photo/aliPay.jpg" rel="external nofollow noreferrer" target="_blank"><img class="post-qr-code-img" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/photo/aliPay.jpg" alt="支付宝"/></a><div class="post-qr-code-desc">支付宝</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/posts/java%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E6%89%93%E5%8D%B0log/"><img class="prev-cover" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-9.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">java如何优雅的打印log</div></div></a></div><div class="next-post pull-right"><a href="/posts/mybatisplus%E9%92%88%E5%AF%B9saas%E7%B3%BB%E7%BB%9F%E7%9A%84%E5%8A%A8%E6%80%81%E5%A4%9A%E7%A7%9F%E6%88%B7%E6%8F%92%E4%BB%B6/"><img class="next-cover" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-5.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">MybatisPlus针对Saas系统的动态多租户插件</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/posts/mybatisplus%E5%88%86%E6%9E%90lambda%E8%AF%AD%E6%B3%95%E5%8E%9F%E7%90%86/" title="mybatisPlus分析Lambda语法原理"><img class="cover" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-9.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-07-25</div><div class="title">mybatisPlus分析Lambda语法原理</div></div></a></div><div><a href="/posts/mybatisplus%E9%92%88%E5%AF%B9saas%E7%B3%BB%E7%BB%9F%E7%9A%84%E5%8A%A8%E6%80%81%E5%A4%9A%E7%A7%9F%E6%88%B7%E6%8F%92%E4%BB%B6/" title="MybatisPlus针对Saas系统的动态多租户插件"><img class="cover" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-5.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-07-25</div><div class="title">MybatisPlus针对Saas系统的动态多租户插件</div></div></a></div><div><a href="/posts/mybatisplus%E8%AF%AD%E6%B3%95%E7%B3%96%E7%9A%84%E6%A0%A1%E9%AA%8C/" title="MybatisPlus语法糖的校验"><img class="cover" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-7.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-08-22</div><div class="title">MybatisPlus语法糖的校验</div></div></a></div></div></div><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="twikoo-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#1-%E5%AD%97%E6%AE%B5%E5%A1%AB%E5%85%85%E5%99%A8"><span class="toc-text">1.字段填充器</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8E%9F%E7%90%86"><span class="toc-text">原理</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#2-%E6%89%B9%E9%87%8F-%E5%8D%95%E4%B8%AA-%E8%BD%AF%E5%88%A0%E9%99%A4%E4%BD%BF%E8%87%AA%E5%8A%A8%E5%A1%AB%E5%85%85%E5%99%A8%E7%94%9F%E6%95%88%EF%BC%88%E9%BB%98%E8%AE%A4%E4%B8%8D%E7%94%9F%E6%95%88%EF%BC%89"><span class="toc-text">2.[批量|单个]软删除使自动填充器生效（默认不生效）</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89%E6%89%B9%E9%87%8F%E8%BD%AF%E5%88%A0%E9%99%A4%E7%9A%84%E4%BB%A3%E7%A0%81"><span class="toc-text">自定义批量软删除的代码</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9C%80%E5%90%8E%E9%9C%80%E8%A6%81%E6%8A%8Asql%E6%98%A0%E5%B0%84%E7%9A%84%E5%B7%A5%E5%85%B7%E7%B1%BB%E6%B7%BB%E5%8A%A0%E5%88%B0Spring%E5%AE%B9%E5%99%A8%E4%B8%AD%E5%93%A6"><span class="toc-text">最后需要把sql映射的工具类添加到Spring容器中哦</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#3-MybatisPlus%E6%9F%A5%E8%AF%A2%E8%BD%AF%E5%88%A0%E9%99%A4%E7%9A%84%E6%95%B0%E6%8D%AE"><span class="toc-text">3.MybatisPlus查询软删除的数据</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%A6%96%E5%85%88%E5%AE%9A%E4%B9%89%E6%96%B9%E6%B3%95%E5%88%B0mapper%E9%87%8C%E9%9D%A2"><span class="toc-text">首先定义方法到mapper里面</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%84%B6%E5%90%8E%E5%AE%9A%E4%B9%89%E8%BF%99%E4%BA%9B%E4%B8%AA%E6%96%B9%E6%B3%95%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="toc-text">然后定义这些个方法的实现</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%91%E5%AE%9Astatement"><span class="toc-text">绑定statement</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#4-%E9%81%BF%E5%85%8D%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%BC%96%E7%A0%81"><span class="toc-text">4.避免字符串编码</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#5-%E9%81%BF%E5%85%8D%E7%A9%BA%E6%8C%87%E9%92%88%EF%BC%8C%E4%BD%BFapi%E6%93%8D%E4%BD%9C%E6%9B%B4%E5%AE%89%E5%85%A8"><span class="toc-text">5.避免空指针，使api操作更安全</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-text">总结</span></a></li></ol></div></div></div></div></main><footer id="footer" style="background-image: url('https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-5.png')"><div id="footer-wrap"><div class="copyright">&copy;2022 By author</div><div class="footer_custom_text">千里之行始于足下</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"></div><div id="rightside-config-show"><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">本地搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div></div></div><div id="search-mask"></div></div><div><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly@4.0.1/source/js/utils.min.js"></script><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly@4.0.1/source/js/main.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><script src="https://cdn.jsdelivr.net/gh/jerryc127/butterfly.js.org/source/selfjs/localsearch.min.js?ver=4.0.0"></script><script>var preloader = {
+  endLoading: () => {
+    document.body.style.overflow = 'auto';
+    document.getElementById('loading-box').classList.add("loaded")
+  },
+  initLoading: () => {
+    document.body.style.overflow = '';
+    document.getElementById('loading-box').classList.remove("loaded")
+
+  }
+}
+window.addEventListener('load',preloader.endLoading())</script><div class="js-pjax"><script>(() => {
+  const $mermaidWrap = document.querySelectorAll('#article-container .mermaid-wrap')
+  if ($mermaidWrap.length) {
+    window.runMermaid = () => {
+      window.loadMermaid = true
+      const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+      Array.from($mermaidWrap).forEach((item, index) => {
+        const mermaidSrc = item.firstElementChild
+        const mermaidThemeConfig = '%%{init:{ \'theme\':\'' + theme + '\'}}%%\n'
+        const mermaidID = 'mermaid-' + index
+        const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+        mermaid.mermaidAPI.render(mermaidID, mermaidDefinition, (svgCode) => {
+          mermaidSrc.insertAdjacentHTML('afterend', svgCode)
+        })
+      })
+    }
+
+    const loadMermaid = () => {
+      window.loadMermaid ? runMermaid() : getScript('https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js').then(runMermaid)
+    }
+
+    window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+  }
+})()</script><script>(()=>{
+  const init = () => {
+    twikoo.init(Object.assign({
+      el: '#twikoo-wrap',
+      envId: 'https://twikoo1-two.vercel.app/',
+      region: '',
+      onCommentLoaded: function () {
+        btf.loadLightbox(document.querySelectorAll('#twikoo .tk-content img:not(.vemoji)'))
+      }
+    }, null))
+  }
+
+  const getCount = () => {
+    twikoo.getCommentsCount({
+      envId: 'https://twikoo1-two.vercel.app/',
+      region: '',
+      urls: [window.location.pathname],
+      includeReply: false
+    }).then(function (res) {
+      document.getElementById('twikoo-count').innerText = res[0].count
+    }).catch(function (err) {
+      console.error(err);
+    });
+  }
+
+  const runFn = () => {
+    init()
+    GLOBAL_CONFIG_SITE.isPost && getCount()
+  }
+
+  const loadTwikoo = () => {
+    if (typeof twikoo === 'object') {
+      setTimeout(runFn,0)
+      return
+    } 
+    getScript('https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js').then(runFn)
+  }
+
+  if ('Twikoo' === 'Twikoo' || !true) {
+    if (true) btf.loadComment(document.getElementById('twikoo-wrap'), loadTwikoo)
+    else loadTwikoo()
+  } else {
+    window.loadOtherComment = () => {
+      loadTwikoo()
+    }
+  }
+})()</script></div><script>window.addEventListener('load', () => {
+  const changeContent = (content) => {
+    if (content === '') return content
+
+    content = content.replace(/<img.*?src="(.*?)"?[^\>]+>/ig, '[图片]') // replace image link
+    content = content.replace(/<a[^>]+?href=["']?([^"']+)["']?[^>]*>([^<]+)<\/a>/gi, '[链接]') // replace url
+    content = content.replace(/<pre><code>.*?<\/pre>/gi, '[代码]') // replace code
+    content = content.replace(/<[^>]+>/g,"") // remove html tag
+
+    if (content.length > 150) {
+      content = content.substring(0,150) + '...'
+    }
+    return content
+  }
+
+  const getComment = () => {
+    const runTwikoo = () => {
+      twikoo.getRecentComments({
+        envId: 'https://twikoo1-two.vercel.app/',
+        region: '',
+        pageSize: 6,
+        includeReply: true
+      }).then(function (res) {
+        const twikooArray = res.map(e => {
+          return {
+            'content': changeContent(e.comment),
+            'avatar': e.avatar,
+            'nick': e.nick,
+            'url': e.url + '#' + e.id,
+            'date': new Date(e.created).toISOString()
+          }
+        })
+
+        saveToLocal.set('twikoo-newest-comments', JSON.stringify(twikooArray), 5/(60*24))
+        generateHtml(twikooArray)
+      }).catch(function (err) {
+        const $dom = document.querySelector('#card-newest-comments .aside-list')
+        $dom.innerHTML= "无法获取评论，请确认相关配置是否正确"
+      })
+    }
+
+    if (typeof twikoo === 'object') {
+      runTwikoo()
+    } else {
+      getScript('https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js').then(runTwikoo)
+    }
+  }
+
+  const generateHtml = array => {
+    let result = ''
+
+    if (array.length) {
+      for (let i = 0; i < array.length; i++) {
+        result += '<div class=\'aside-list-item\'>'
+
+        if (true) {
+          const name = 'data-lazy-src'
+          result += `<a href='${array[i].url}' class='thumbnail'><img ${name}='${array[i].avatar}' alt='${array[i].nick}'></a>`
+        }
+        
+        result += `<div class='content'>
+        <a class='comment' href='${array[i].url}' title='${array[i].content}'>${array[i].content}</a>
+        <div class='name'><span>${array[i].nick} / </span><time datetime="${array[i].date}">${btf.diffDate(array[i].date, true)}</time></div>
+        </div></div>`
+      }
+    } else {
+      result += '没有评论'
+    }
+
+    let $dom = document.querySelector('#card-newest-comments .aside-list')
+    $dom.innerHTML= result
+    window.lazyLoadInstance && window.lazyLoadInstance.update()
+    window.pjax && window.pjax.refresh($dom)
+  }
+
+  const newestCommentInit = () => {
+    if (document.querySelector('#card-newest-comments .aside-list')) {
+      const data = saveToLocal.get('twikoo-newest-comments')
+      if (data) {
+        generateHtml(JSON.parse(data))
+      } else {
+        getComment()
+      }
+    }
+  }
+
+  newestCommentInit()
+  document.addEventListener('pjax:complete', newestCommentInit)
+})</script><div class="aplayer no-destroy" data-id="7342827202" data-server="netease" data-type="playlist" data-fixed="true" data-autoplay="true"> </div><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-fluttering-ribbon.min.js"></script><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/activate-power-mode.min.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+POWERMODE.mobile = true;
+document.body.addEventListener('input', POWERMODE);
+</script><script id="click-show-text" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/click-show-text.min.js" data-mobile="false" data-text="富强,民主,文明,和谐,自由,平等,公正,法治,爱国,敬业,诚信,友善" data-fontsize="15px" data-random="false" async="async"></script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/gh/metowolf/MetingJS@1.2/dist/Meting.min.js"></script><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js"></script><script>let pjaxSelectors = ["title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+var pjax = new Pjax({
+  elements: 'a:not([target="_blank"])',
+  selectors: pjaxSelectors,
+  cacheBust: false,
+  analytics: true,
+  scrollRestoration: false
+})
+
+document.addEventListener('pjax:send', function () {
+
+  // removeEventListener scroll 
+  window.tocScrollFn && window.removeEventListener('scroll', window.tocScrollFn)
+  window.scrollCollect && window.removeEventListener('scroll', scrollCollect)
+
+  typeof preloader === 'object' && preloader.initLoading()
+  document.getElementById('rightside').style.cssText = "opacity: ''; transform: ''"
+  
+  if (window.aplayers) {
+    for (let i = 0; i < window.aplayers.length; i++) {
+      if (!window.aplayers[i].options.fixed) {
+        window.aplayers[i].destroy()
+      }
+    }
+  }
+
+  typeof typed === 'object' && typed.destroy()
+
+  //reset readmode
+  const $bodyClassList = document.body.classList
+  $bodyClassList.contains('read-mode') && $bodyClassList.remove('read-mode')
+
+})
+
+document.addEventListener('pjax:complete', function () {
+  window.refreshFn()
+
+  document.querySelectorAll('script[data-pjax]').forEach(item => {
+    const newScript = document.createElement('script')
+    const content = item.text || item.textContent || item.innerHTML || ""
+    Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+    newScript.appendChild(document.createTextNode(content))
+    item.parentNode.replaceChild(newScript, item)
+  })
+
+  GLOBAL_CONFIG.islazyload && window.lazyLoadInstance.update()
+
+  typeof chatBtnFn === 'function' && chatBtnFn()
+  typeof panguInit === 'function' && panguInit()
+
+  // google analytics
+  typeof gtag === 'function' && gtag('config', 'G-RPEPZKPQGQ', {'page_path': window.location.pathname});
+
+  // baidu analytics
+  typeof _hmt === 'object' && _hmt.push(['_trackPageview',window.location.pathname]);
+
+  typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+
+  // prismjs
+  typeof Prism === 'object' && Prism.highlightAll()
+
+  typeof preloader === 'object' && preloader.endLoading()
+})
+
+document.addEventListener('pjax:error', (e) => {
+  if (e.request.status === 404) {
+    pjax.loadUrl('/404.html')
+  }
+})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><!-- hexo injector body_end start --><script data-pjax>
+if (GLOBAL_CONFIG_SITE.isPost && document.getElementById(decodeURI(location.hash.replace('#', '')))){
+    setTimeout(function self(){
+        let nextFrame;
+        document.getAnimations().forEach(function (item){
+            if (item.animationName === 'bottom-top'){
+                nextFrame = true;
+            }
+        });
+        if (nextFrame){
+            setTimeout(self, 0);
+            return;
+        }
+        btf.scrollToDest(btf.getEleTop(document.getElementById(decodeURI(location.hash.replace('#', '')))), 300);
+    }, 0);
+}
+</script><script class="js-pjax">
+
+document.querySelectorAll('a[href^="#"]:not([href="#"])').forEach(function (a){
+    a.addEventListener('click', function (e){
+        e.preventDefault();
+        e.stopPropagation();
+        window.history.pushState(null, null, this.hash);
+        btf.scrollToDest(btf.getEleTop(document.getElementById(decodeURI(a.hash.replace('#', '')))), 300);
+    });
+});
+
+!function (){
+    if (!GLOBAL_CONFIG_SITE.isToc){
+        return;
+    }
+    let toc = document.getElementById('mobile-toc-button');
+    if (!toc){
+        return;
+    }
+    
+    let tocHeadline = document.getElementsByClassName("item-headline")[0];
+    
+    tocHeadline.querySelectorAll('*').forEach(function (item){
+        item.style.cursor = 'pointer';
+        item.onmouseover = function(){
+            tocHeadline.style.fontWeight = "bold"; 
+        };
+        item.onmouseout = function(){
+            tocHeadline.style.fontWeight = ""; 
+        };
+        item.addEventListener('click', function (){
+            tocHeadline.nextElementSibling.classList.toggle('is-expand')
+        });
+    });
+    
+    let fa_close = document.createElement("i");
+    fa_close.style.cursor = 'pointer';
+    fa_close.classList.add("fa");
+    fa_close.classList.add("fa-close");
+    fa_close.addEventListener('click', function (){
+        toc.click();
+    });
+    tocHeadline.appendChild(fa_close);
+    
+    // 如果offsetParent不存在，说明此元素被隐藏，不是小屏设备
+    // if (!toc.offsetParent) {
+    //     return;
+    // }
+    
+    // 打开toc
+    setTimeout(function self(){
+        // 等待该组件加载完成
+        if (!window.mobileToc || !window.mobileToc.open){
+            setTimeout(self, 0);
+            return;
+        }
+        window.mobileToc.open();
+    }, 0);
+    
+    // 点击目录并不会自动关闭，只有重复点击才会关闭toc
+    Array.from(document.getElementsByClassName("toc") || []).forEach(function(item){
+        item.addEventListener('click', function (e){
+            e.preventDefault();
+            e.stopPropagation();
+            let active = document.querySelector('.toc-link.active');
+            if(active === e.target || active === e.target.parentElement) { 
+                window.mobileToc.close();
+                return;
+            }
+            const $target = e.target.classList.contains('toc-link') ? e.target : e.target.parentElement;
+            btf.scrollToDest(btf.getEleTop(document.getElementById(decodeURI($target.hash).replace('#', ''))), 300);
+        });
+    });
+}();
+</script><!-- hexo injector body_end end --></body></html>

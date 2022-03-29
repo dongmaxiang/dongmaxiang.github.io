@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dongmaxiang.vercel.app/sitemap.xml
+Sitemap: https://dongmaxiang.vercel.app/baidusitemap.xml

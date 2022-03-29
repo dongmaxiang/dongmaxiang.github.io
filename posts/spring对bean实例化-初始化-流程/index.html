@@ -1,0 +1,783 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><!-- hexo injector head_begin start --><script>
+(function(){
+    if (location.host.indexOf('github') > -1){
+        location.href = 'https://dongmaxiang.vercel.app' + location.pathname;
+    }
+})(); 
+</script><!-- hexo injector head_begin end --><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>spring对bean实例化-初始化-流程 | title</title><meta name="keywords" content="源码,spring"><meta name="author" content="author"><meta name="copyright" content="author"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="前言获取一个bean时AbstractBeanFactory#doGetBean，除非bean已经存在，否则会通过beanDefinition自动创建   创建时，如果没有beanDefinition就会报错，所以beanDefinition是一个很重要的存在 创建流程很复杂，必须要先了解bean的各种后置处理器BeanPostProcessor   spring获取bean时,底层是通过bean">
+<meta property="og:type" content="article">
+<meta property="og:title" content="spring对bean实例化-初始化-流程">
+<meta property="og:url" content="https://dongmaxiang.vercel.app/posts/spring%E5%AF%B9bean%E5%AE%9E%E4%BE%8B%E5%8C%96-%E5%88%9D%E5%A7%8B%E5%8C%96-%E6%B5%81%E7%A8%8B/">
+<meta property="og:site_name" content="title">
+<meta property="og:description" content="前言获取一个bean时AbstractBeanFactory#doGetBean，除非bean已经存在，否则会通过beanDefinition自动创建   创建时，如果没有beanDefinition就会报错，所以beanDefinition是一个很重要的存在 创建流程很复杂，必须要先了解bean的各种后置处理器BeanPostProcessor   spring获取bean时,底层是通过bean">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-5.png">
+<meta property="article:published_time" content="2021-09-21T21:57:47.000Z">
+<meta property="article:modified_time" content="2021-09-21T21:57:47.000Z">
+<meta property="article:author" content="author">
+<meta property="article:tag" content="源码">
+<meta property="article:tag" content="spring">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-5.png"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://dongmaxiang.vercel.app/posts/spring%E5%AF%B9bean%E5%AE%9E%E4%BE%8B%E5%8C%96-%E5%88%9D%E5%A7%8B%E5%8C%96-%E6%B5%81%E7%A8%8B/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//www.google-analytics.com" crossorigin=""/><link rel="preconnect" href="//hm.baidu.com"/><link rel="preconnect" href="//fonts.googleapis.com" crossorigin=""/><link rel="preconnect" href="//busuanzi.ibruce.info"/><meta name="google-site-verification" content="uKCYPhzuOQS6R9c8ZI9OAbvmoeObhrmxe-U6Ijl_YPY"/><meta name="baidu-site-verification" content="code-RSipQpNIZM"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.css" media="print" onload="this.media='all'"><script>var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?dde0ff961302057974d83940aa88c02f";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script><script async="async" src="https://www.googletagmanager.com/gtag/js?id=G-RPEPZKPQGQ"></script><script>window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-RPEPZKPQGQ');
+</script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Titillium+Web&amp;display=swap" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.json","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":200},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: true,
+    post: true
+  },
+  runtime: '天',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: author","link":"链接: ","source":"来源: title","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/flickr-justified-gallery@2/dist/fjGallery.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: true,
+  isAnchor: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'spring对bean实例化-初始化-流程',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2021-09-22 05:57:47'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+          const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+          const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+          const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+
+          if (t === undefined) {
+            if (isLightMode) activateLightMode()
+            else if (isDarkMode) activateDarkMode()
+            else if (isNotSpecified || hasNoSupport) {
+              const now = new Date()
+              const hour = now.getHours()
+              const isNight = hour <= 6 || hour >= 18
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+    const detectApple = () => {
+      if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+    })(window)</script><!-- hexo injector head_end start -->
+<link rel="stylesheet" href="/css/custom.css">
+<script>
+window.Traditionalized = (arg) => arg;
+</script><script>
+// 自言自语支持上传图片
+addEventListener("load", function() {
+    if (!window["atEvery"]) {
+        return;
+    }
+    let judgeSystem_ = Client.prototype.judgeSystem;
+    Client.prototype.judgeSystem = function (){
+        judgeSystem_.apply(this, arguments);
+        if (!this.system.name){
+            this.system.name = navigator.platform;
+        }
+    };
+    atEvery.prototype.beginUpload = function(file) {
+        function Show() {
+            fadeIn("shade");
+            fadeIn("shuoshuo-modal");
+        }
+        let currentUser = AV.User.current();
+        if (currentUser) { /* console.log(currentUser); */ } else { /* document.getElementById("logw").innerHTML= "<center><pre><code>" + text15 + "</code></pre></center>"; */
+            Show();
+            return;
+        }
+        if (!/\.(jpg|gif|jpeg|ico|png|svg|mp4|mov)$/i.test(file.name)) {
+            alert("不支持的文件类型，支持的文件格式有jpg|gif|jpeg|ico|png|svg|mp4|mov");
+            return;
+        }
+        let fileType = "";
+        let sourceSize = (file.size / 1024).toFixed(0);
+        let sourceSizeLimit = 1024 * 50;
+        if (sourceSize > sourceSizeLimit) {
+            alert("资源上传最大限制为50M");
+            return;
+        }
+        if (/\.(jpg|gif|jpeg|ico|png|svg)$/i.test(file.name)) {
+            fileType = "image";
+        } else if (/\.(mp4|mov)$/i.test(file.name)) {
+            fileType = "video";
+        }
+
+        function fadeIn(id) {
+            if (!document.getElementById(id)) return;
+            let nowEle = document.getElementById(id);
+            nowEle.style.display = "";
+        }
+
+        function fadeOut(id) {
+            if (!document.getElementById(id)) return;
+            let nowEle = document.getElementById(id);
+            nowEle.style.display = "none";
+        }
+        fadeIn("lazy");
+        new AV.File(file.name, file).save().then((res) => {
+            let sourceMd = "";
+            if (fileType === "video") {
+                sourceMd = "<video controls width=\"100%\" height=\"auto\"><source src=\"" + res.attributes.url + "\"></video>";
+            } else if (fileType === "image") {
+                sourceMd = "![" + res.id + "](" + res.attributes.url + ")";
+            }
+            insertEmoji(sourceMd);
+            fadeOut("lazy");
+            fadeIn('shuoshuo_input');
+        }, (error) => {
+            fadeOut("lazy");
+            fadeIn('shuoshuo_input');
+            insertEmoji("保存失败，可能是文件无法被读取，或者上传过程中出现问题");
+            console.log("保存失败，可能是文件无法被读取，或者上传过程中出现问题", error)
+        });
+    }
+});
+
+// 自言自语查询软删除的数据
+(function(){
+    function fadeIn(id){
+        if(!document.getElementById(id)) return ;
+        let nowEle = document.getElementById(id);
+        nowEle.style.display = "";
+    }
+    
+    let TEMP_AV;
+    Object.defineProperty(window,"AV", {
+        set: function(arg) {
+            TEMP_AV = arg;
+            let oldQuery = TEMP_AV.Query;
+            TEMP_AV.Query = function() {
+                let oldValue = new oldQuery(...arguments);
+                oldValue.equalTo("deleteFlag", false);
+                return oldValue;
+            };
+            
+            let oldWithoutData = TEMP_AV.Object.createWithoutData;
+            TEMP_AV.Object.createWithoutData = function() {
+                let oldValue = new oldWithoutData(...arguments);
+                oldValue.destroy = function () {
+                    return new Promise((resolve, reject)=>{
+                        oldValue.set("deleteFlag", true);
+                        oldValue.save().then(() => {
+                            fadeIn("shade");
+                            fadeIn("shanchu");
+                            resolve();
+                        });
+                    });
+                };
+                return oldValue;
+            };
+        },
+        
+        get: function() {
+            return TEMP_AV;
+        }
+    })
+})();
+</script><!-- hexo injector head_end end --><link rel="alternate" href="/atom.xml" title="title" type="application/atom+xml">
+</head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src= "/img/loading.gif" data-lazy-src="/img/caoAvatars.svg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data is-center"><div class="data-item"><a href="/archives/"><div class="headline">文章</div><div class="length-num">45</div></a></div><div class="data-item"><a href="/tags/"><div class="headline">标签</div><div class="length-num">29</div></a></div><div class="data-item"><a href="/categories/"><div class="headline">分类</div><div class="length-num">21</div></a></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);" rel="external nofollow noreferrer"><i class="fa-fw fas fa-compass"></i><span> 目录</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li></ul></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);" rel="external nofollow noreferrer"><i class="fa-fw fa fa-heartbeat"></i><span> 娱乐</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page child" href="/books/"><i class="fa-fw fas fa-book"></i><span> 图书</span></a></li><li><a class="site-page child" href="/Gallery/"><i class="fa-fw fas fa-images"></i><span> 图库</span></a></li><li><a class="site-page child" href="/talking/"><i class="fa-fw fas fa-cubes"></i><span> 自言自語</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/messageboard/"><i class="fa-fw fas fa-comment-dots"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-thumbs-up"></i><span> 友情链接</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-5.png')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">title</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);" rel="external nofollow noreferrer"><i class="fa-fw fas fa-compass"></i><span> 目录</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></li></ul></div><div class="menus_item"><a class="site-page group" href="javascript:void(0);" rel="external nofollow noreferrer"><i class="fa-fw fa fa-heartbeat"></i><span> 娱乐</span><i class="fas fa-chevron-down"></i></a><ul class="menus_item_child"><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li><li><a class="site-page child" href="/books/"><i class="fa-fw fas fa-book"></i><span> 图书</span></a></li><li><a class="site-page child" href="/Gallery/"><i class="fa-fw fas fa-images"></i><span> 图库</span></a></li><li><a class="site-page child" href="/talking/"><i class="fa-fw fas fa-cubes"></i><span> 自言自語</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/messageboard/"><i class="fa-fw fas fa-comment-dots"></i><span> 留言板</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-thumbs-up"></i><span> 友情链接</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">spring对bean实例化-初始化-流程<a class="post-edit-link" href="https://github.com/dongmaxiang/hexo/edit/master/source/_posts/java/2021-09-22-spring对bean实例化-初始化-流程.markdown" rel="external nofollow noreferrer" title="编辑" target="_blank"><i class="fas fa-pencil-alt"></i></a></h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="fa-fw post-meta-icon far fa-calendar-alt"></i><span class="post-meta-label">发表于</span><time datetime="2021-09-21T21:57:47.000Z" title="发表于 2021-09-22 05:57:47">2021-09-22</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/java/">java</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/java/spring/">spring</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">2.9k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>9分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title="spring对bean实例化-初始化-流程"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>获取一个bean时<code>AbstractBeanFactory#doGetBean</code>，除非bean已经存在，否则会通过beanDefinition自动创建  </p>
+<p>创建时，<a href="/posts/springbeanfactory%E6%B5%81%E7%A8%8B%E8%A7%A3%E6%9E%90#4-beandefinitionregistry">如果没有beanDefinition就会报错，所以beanDefinition是一个很重要的存在</a></p>
+<p><strong>创建流程很复杂，必须要先了解bean的各种后置处理器<a href="/posts/beanpostprocessor%E7%9A%84%E8%B0%83%E7%94%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%90%84%E7%A7%8D%E5%AE%9E%E7%8E%B0"><code>BeanPostProcessor</code></a></strong>  </p>
+<p>spring获取bean时,底层是通过beanName获取的，如果是根据类型，那么他会先根据类型先获取name，然后根据name在获取bean  </p>
+<blockquote>
+<p>beanName可以自定义，如果非自定义默认则是classSimpleName，且第一个字母小写<br>FactoryBean类型的beanName也是同上,如果要获取FactoryBean类型的实例话，则beanName要以&quot;&amp;&quot;为前缀。否则获取的就是factoryBean对应的实际bean</p>
+</blockquote>
+<p>以下为获取(创建)bean的大体流程</p>
+<hr>
+<span id="通过class类型或注解类型获取beanname"></span><h2 id="通过class类型或注解类型获取beanName"><a href="#通过class类型或注解类型获取beanName" class="headerlink" title="通过class类型或注解类型获取beanName"></a>通过class类型或注解类型获取beanName</h2><p><strong>不管怎样，spring底层是<a href="#%E6%A0%B9%E6%8D%AEbeanname%E4%BC%98%E5%85%88%E8%8E%B7%E5%8F%96%E5%8D%95%E5%88%97%E7%9A%84bean">通过name获取对应的bean</a></strong><br>如果是根据注解获取bean，底层则会遍历所有的beanNames，通过beanNames获取到对应的class，然后然后判断class上是否有相对应的注解<br>那么咱们只需要关注如何根据beanName获取到对应class，以及如何根据class获取到对应的beanNames就行  </p>
+<hr>
+<span id="通过beanname获取class流程"></span><h3 id="通过beanName获取class流程"><a href="#通过beanName获取class流程" class="headerlink" title="通过beanName获取class流程"></a>通过beanName获取class流程</h3><ol>
+<li><p>从已初始化的单例bean<code>singletonObjects</code>中获取(不允许早期初始化-非循环依赖的方式获取)，没有就返回null，有就用返回实例对应的class  </p>
+<blockquote>
+<p>如果是<code>FactoryBean</code>则使用<code>Factory#getObjectType</code>，否则用<code>obj.getClass()</code>直接返回</p>
+</blockquote>
+</li>
+<li><p>如果上一步未满足，并且本地不包含beanDefinition，则尝试从<a href="#%E9%80%9A%E8%BF%87beanname%E8%8E%B7%E5%8F%96class%E6%B5%81%E7%A8%8B">parentBeanFactory中获取</a>，否则执行下一步  </p>
+</li>
+<li><p>获取beanDefinition<br>如果不包含beanDefinition则就直接报错<br>通过definition优先获取被包装的definition<code>getDecoratedDefinition</code>  </p>
+<blockquote>
+<p> 因为有可能目标类将要被代理，在创建beanDefinition的时候就做了手脚,比如说<code>ScopedProxyUtils#createScopedProxy</code>：bean的作用域通过代理实现  </p>
+</blockquote>
+</li>
+<li><p><a href="#%E9%80%9A%E8%BF%87rootbeandefinition%E8%8E%B7%E5%8F%96%E7%9C%9F%E5%AE%9E%E7%9A%84class">获取beanDefinition对应的class</a><br>最后通过<a href="/posts/beanpostprocessor%E7%9A%84%E8%B0%83%E7%94%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%90%84%E7%A7%8D%E5%AE%9E%E7%8E%B0#smartinstantiationawarebeanpostprocessor"><code>SmartInstantiationAwareBeanPostProcessor#predictBeanType</code></a>返回对应的beanType</p>
+</li>
+<li><p>执行factoryBean的转换<br>如果参数beanName是以&quot;&amp;&quot;为前缀，代表要获取FactoryBean类型的class，如果上一步获取到的class不是FactoryBean类型，则返回null<br>如果参数beanName不是以&quot;&amp;&quot;为前缀，代表要获取真实bean的类型，如果上一步获取到的不是FactoryBean类型，则直接返回，如果是FactoryBean类型，优先根据泛型获取对应的type，如果获取失败则要进行初始化FactoryBean,因为一会要调用<code>Factory#getObjectType</code>来返回真实的类型<br>创建流程请参考<a href="#%E5%88%9B%E5%BB%BAbeanwrapper"><code>AbstractAutowireCapableBeanFactory#createBeanInstance</code></a>(包含构造注入流程)，完事会返回一个BeanWrapper，如果factoryBean本身是单例的话则会放入缓存中<code>factoryBeanInstanceCache</code>，<a href="#%E7%BC%93%E5%AD%98%E5%8F%96%E5%AF%B9%E5%BA%94%E7%9A%84beanWrapper">在获取bean的时候，保证不能有二次初始化</a></p>
+</li>
+</ol>
+<hr>
+<span id="通过class获取对应的beannames流程"></span><h3 id="通过class获取对应的beanNames流程"><a href="#通过class获取对应的beanNames流程" class="headerlink" title="通过class获取对应的beanNames流程"></a>通过class获取对应的beanNames流程</h3><ol>
+<li><p>获取所有已注册的beanDefinitionNames和手动注册的单例beanNames(手动注册的已初始化)<br>条件包含：非alias、非abstract、且是否包含非单例、是否允许早期初始化两个动态条件</p>
+</li>
+<li><p>依次遍历beanName</p>
+</li>
+<li><p>通过<a href="#%E9%80%9A%E8%BF%87beanname%E8%8E%B7%E5%8F%96class%E6%B5%81%E7%A8%8B">beanName获取class</a><br>与&#39;通过beanName获取class流程&#39;大体流程一致，但是有些许的不同，比如没有beanDefinition不会报错，如果是FactoryBean则尽量不初始化的情况下获取到对应的targetType，否则只能初始化并调用<code>getTargetType</code></p>
+</li>
+<li><p>判断获取到的class  </p>
+<ul>
+<li>如果没有获取到class则为false,代表不匹配  </li>
+<li>获取到class之后调用<code>isInstance</code><br>  如果返回true则会把当前的beanName添加到list里面，最后一并返回<br>  如果为false，并且当前的beanName的类型为FactoryBean类型则会拼接&#39;&amp;&#39;前缀作为beanName从新判断  </li>
+</ul>
+</li>
+</ol>
+<hr>
+<span id="根据beanname优先获取单列的bean"></span><h2 id="根据beanName优先获取单列的bean"><a href="#根据beanName优先获取单列的bean" class="headerlink" title="根据beanName优先获取单列的bean"></a>根据beanName优先获取单列的bean</h2><hr>
+<span id="把beanname转换为为标准的beanname"></span><h3 id="把beanName转换为为标准的beanName"><a href="#把beanName转换为为标准的beanName" class="headerlink" title="把beanName转换为为标准的beanName"></a>把beanName转换为为标准的beanName</h3><ol>
+<li>去除&quot;&amp;&quot;的前缀<br>FactoryBean他就是一个普通的bean，在注册beanDefinition时和普通的bean别无二致，只有在<a href="#factorybean%E7%9A%84%E8%BD%AC%E6%8D%A2">获取的时候会有不同</a></li>
+<li>通过alias获取真实的Name<br>alisa其底层实现其实就是一个map，key为alias，value为实际的beanName</li>
+</ol>
+<p>优先获取单列，如果非单例的bean压根就获取不到，所以优先获取单列  </p>
+<blockquote>
+<p>也可以手动注册单例，但是一样的beanName不允许二次注册(there is already)<br>手动注册的和spring扫描的且已初始化的单列bean都是存放在同一个地方中：<code>singletonObjects</code>  </p>
+</blockquote>
+<hr>
+<h3 id="单例bean的获取流程"><a href="#单例bean的获取流程" class="headerlink" title="单例bean的获取流程"></a>单例bean的获取流程</h3><ol>
+<li><p>从<code>singletonObjects</code>优先获取单例bean(手动注册的和spring已初始化的都在同一个地方)，有则直接返回  </p>
+</li>
+<li><p>没有则判断当前的beanName是否为正在创建的单例bean，因为正在创建的bean可能会依赖其他的bean，而其他的bean依赖于正在创建的bean，就变成了一个循环依赖  </p>
+<blockquote>
+<p>spring在每创建一个单例bean之前把当前beanName存放在一个set中，标志正在创建中，创建完之后会从Set删除，并把创建的实例放入到<code>singletonObjects</code>中  </p>
+</blockquote>
+</li>
+<li><p>如果当前获取的bean正在创建(循环依赖)，则会从<code>earlySingletonObjects</code>中获取  </p>
+<blockquote>
+<p><code>earlySingletonObjects</code>是map类型，作用是暂时存放正在创建的bean，key为beanName,value为bean的实例且是由<code>singletonFactories</code>提供的  </p>
+</blockquote>
+</li>
+<li><p>如果<code>earlySingletonObjects</code>获取为空，且允许早期的引用(循环依赖)则从<a href="#%E5%8D%95%E4%BE%8B%E7%9A%84bean%E6%94%BE%E5%85%A5%E4%B8%89%E7%BA%A7%E7%BC%93%E5%AD%98%E4%B8%AD"><code>singletonFactories</code></a>中获取<br><code>singletonFactories</code>由<code>SmartInstantiationAwareBeanPostProcessor#getEarlyBeanReference</code>提供早期的引用，如aop返回代理对象的引用  </p>
+<blockquote>
+<p>等实例创建完之后会放入到<code>singletonObjects</code>中，并从<code>earlySingletonObjects</code>和<code>singletonFactories</code>移除  </p>
+</blockquote>
+</li>
+<li><p>执行factoryBean的转换</p>
+</li>
+</ol>
+<p><span id='三级缓存'></span></p>
+<blockquote>
+<p>其实单例bean获取的时候就已经解决了循环依赖，以上的各个变量就是网上说的三级缓存，如果还不太理解可以直观的看下代码  </p>
+</blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DefaultSingletonBeanRegistry</span> <span class="keyword">extends</span> <span class="title">SimpleAliasRegistry</span> <span class="keyword">implements</span> <span class="title">SingletonBeanRegistry</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">getSingleton</span><span class="params">(String beanName)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> getSingleton(beanName, <span class="keyword">true</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> Object <span class="title">getSingleton</span><span class="params">(String beanName, <span class="keyword">boolean</span> allowEarlyReference)</span> </span>&#123;</span><br><span class="line">        Object singletonObject = <span class="keyword">this</span>.singletonObjects.get(beanName);<span class="comment">// 一级缓存，所有已初始化完的单例bean都在这里</span></span><br><span class="line">        <span class="keyword">if</span> (singletonObject == <span class="keyword">null</span> &amp;&amp; isSingletonCurrentlyInCreation(beanName)) &#123;<span class="comment">// 当前bean正在创建中</span></span><br><span class="line">            singletonObject = <span class="keyword">this</span>.earlySingletonObjects.get(beanName);<span class="comment">// 二级缓存，第一次访问肯定是空的，二级缓存的值由三级缓存提供</span></span><br><span class="line">            <span class="keyword">if</span> (singletonObject == <span class="keyword">null</span> &amp;&amp; allowEarlyReference) &#123;</span><br><span class="line">                <span class="keyword">synchronized</span> (<span class="keyword">this</span>.singletonObjects) &#123; <span class="comment">// 上锁</span></span><br><span class="line">                    singletonObject = <span class="keyword">this</span>.singletonObjects.get(beanName); <span class="comment">// 再次查看一级缓存</span></span><br><span class="line">                    <span class="keyword">if</span> (singletonObject == <span class="keyword">null</span>) &#123;</span><br><span class="line">                        singletonObject = <span class="keyword">this</span>.earlySingletonObjects.get(beanName); <span class="comment">// 再次查看二级缓存</span></span><br><span class="line">                        <span class="keyword">if</span> (singletonObject == <span class="keyword">null</span>) &#123;</span><br><span class="line">                            <span class="comment">// 调用三级缓存，三级缓存是在bean创建的时候放进去的，并且value为ObjectFactory，只有在需要的时候才会初始化</span></span><br><span class="line">                            ObjectFactory&lt;?&gt; singletonFactory = <span class="keyword">this</span>.singletonFactories.get(beanName); </span><br><span class="line">                            <span class="keyword">if</span> (singletonFactory != <span class="keyword">null</span>) &#123;</span><br><span class="line">                                singletonObject = singletonFactory.getObject();</span><br><span class="line">                                <span class="keyword">this</span>.earlySingletonObjects.put(beanName, singletonObject);<span class="comment">// 放入二级缓存中</span></span><br><span class="line">                                <span class="keyword">this</span>.singletonFactories.remove(beanName); <span class="comment">// 最后要移除三级缓存</span></span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> singletonObject;</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<span id="factorybean的转换"></span><h3 id="factoryBean的转换"><a href="#factoryBean的转换" class="headerlink" title="factoryBean的转换"></a>factoryBean的转换</h3><p>如果第一步beanName参数是以&quot;&amp;&quot;为前缀，则必须要返回FactoryBean，获取的不是FactoryBean类型的话直接报错<br>如果不是&quot;&amp;&quot;前缀，并且获取到的实例为FactoryBean的类型的话，则标记<code>beanDefinition.isFactoryBean=true</code>，并调用<code>FactoryBean#getObject</code>方法返回真正的对象  </p>
+<hr>
+<span id="工厂bean调用方法factorybean-getobject流程"></span><h3 id="工厂bean调用方法factoryBean-getObject流程"><a href="#工厂bean调用方法factoryBean-getObject流程" class="headerlink" title="工厂bean调用方法factoryBean#getObject流程"></a>工厂bean调用方法<code>factoryBean#getObject</code>流程</h3><ol>
+<li>首先判断是不是<code>isSingleton</code>，如果不是则直接调用<code>getObject</code>方法并调用<code>BeanPostProcessor#postProcessAfterInitialization</code>此时bean已创建完成（并不会自动装配）  </li>
+<li>如果是singleton<code>FactoryBean#isSingleton</code>,则会放入缓存，每次优先取缓存，有则直接返回  </li>
+<li>没有缓存则调用<code>getObject</code>，把当前beanName存放在一个set中，标志正在创建中,然后调用<code>BeanPostProcessor#postProcessAfterInitialization</code>此时bean已创建完成（并不会自动装配）,完事放入缓存中，并从set中移除  <blockquote>
+<p>如果在<code>postProcessAfterInitialization</code>期间又引用了当前的bean的话，则会重新调用<code>getObject</code>返回一个新的对象</p>
+</blockquote>
+</li>
+</ol>
+<hr>
+<h2 id="获取不到bean则创建"><a href="#获取不到bean则创建" class="headerlink" title="获取不到bean则创建"></a>获取不到bean则创建</h2><p>spring对非单例的循环引用会直接报错<code>throw new BeanCurrentlyInCreationException(beanName)</code>  </p>
+<blockquote>
+<p>非单例的bean创建之前都会把beanName放入<code>prototypesCurrentlyInCreation</code>中，创建过程中如果存在一样的bean名称，视为循环引用，直接报错，没有循环引用最后创建完则从中移除</p>
+</blockquote>
+<p>创建bean，必须需要beanDefinition，没有则<code>throw new NoSuchBeanDefinitionException</code>  </p>
+<blockquote>
+<p>beanDefinition的注册<br>在<a href="/posts/springbeanfactory%E6%B5%81%E7%A8%8B%E8%A7%A3%E6%9E%90#4-beandefinitionregistry">beanFactory初始化时</a>，通过调用<a href="/posts/%E8%A7%A3%E6%9E%90spring%E6%98%AF%E5%A6%82%E4%BD%95%E5%90%91beanfactory%E6%B3%A8%E5%86%8Cbean%E7%9A%84">ConfigurationClassPostProcessor</a>向beanFactory中注册符合条件的beanDefinition  </p>
+</blockquote>
+<hr>
+<h3 id="创建bean时的前期流程"><a href="#创建bean时的前期流程" class="headerlink" title="创建bean时的前期流程"></a>创建bean时的前期流程</h3><ol>
+<li><p>如果parentBeanFactory不为空，且当前的beanFactory不包含beanDefinition则交由parentBeanFactory处理，<a href="#%E6%8A%8Abeanname%E8%BD%AC%E6%8D%A2%E4%B8%BA%E4%B8%BA%E6%A0%87%E5%87%86%E7%9A%84beanname">从头开始</a>  </p>
+</li>
+<li><p>把当前的bean标记为已创建，存放在<code>alreadyCreated</code>中，如果<code>alreadyCreated</code>不为空，代表beanFactory已开始创建bean  </p>
+</li>
+<li><p>把当前的beanDefinition转换成<code>RootBeanDefinition</code>，root是spring创建bean时的视图，包含了父类的信息，算是一个标准，没有他可不行  </p>
+<blockquote>
+<p>获取rootBeanDefinition逻辑时，如果包含内嵌的类，并且内嵌的类非singleton，则外围类的scope同内嵌的类  </p>
+</blockquote>
+</li>
+<li><p>确保<code>dependsOn</code>的beanName优先<a href="#%E6%8A%8Abeanname%E8%BD%AC%E6%8D%A2%E4%B8%BA%E4%B8%BA%E6%A0%87%E5%87%86%E7%9A%84beanname">初始化</a>  </p>
+<blockquote>
+<p><code>@DependsOn</code>注解或其他配置等</p>
+</blockquote>
+</li>
+<li><p>判断bean的作用域<br>首先判断作用域，非单例的其他作用域则在创建前会把beanName放入<code>prototypesCurrentlyInCreation</code>中<br>如果有循环引用直接报错(通过<code>prototypesCurrentlyInCreation</code>判断是否包含bean的名称)，单例的循环引用不报错，最后创建完则从中移除  </p>
+<blockquote>
+<p>自定义的作用域(非单例，非<code>prototype</code>)，都会从<code>scopes</code>中取对应的scope实现，比如servlet实现的session、request  </p>
+</blockquote>
+</li>
+</ol>
+<hr>
+<span id="通过rootbeandefinition获取真实的class"></span><h3 id="通过RootBeanDefinition获取真实的class"><a href="#通过RootBeanDefinition获取真实的class" class="headerlink" title="通过RootBeanDefinition获取真实的class"></a>通过RootBeanDefinition获取真实的class</h3><p>如果是FactoryMethod则会通过反射获取方法上返回的类型<br>如果存在tempClassLoader，则用tempClassLoader加载class，不管用什么，都不会初始化class，除非已经初始化过</p>
+<hr>
+<span id="通过instantiationawarebeanpostprocessor提前实例化"></span><h3 id="通过InstantiationAwareBeanPostProcessor提前实例化"><a href="#通过InstantiationAwareBeanPostProcessor提前实例化" class="headerlink" title="通过InstantiationAwareBeanPostProcessor提前实例化"></a>通过<code>InstantiationAwareBeanPostProcessor</code>提前实例化</h3><p>此类为<a href="/posts/beanpostprocessor%E7%9A%84%E8%B0%83%E7%94%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%90%84%E7%A7%8D%E5%AE%9E%E7%8E%B0#instantiationawarebeanpostprocessor"><code>BeanPostProcessor</code></a>的子类<br>可以拦截bean实例化之前（<code>不包含factoryBean#getObject</code>），如果返回不为空，则直接调用<code>BeanPostProcessor</code>的后置方法并直接返回，此时bean已创建完毕（很少用）  </p>
+<hr>
+<span id="创建beanwrapper"></span><h3 id="创建beanWrapper"><a href="#创建beanWrapper" class="headerlink" title="创建beanWrapper"></a>创建beanWrapper</h3><blockquote>
+<p><code>beanDefinition</code>为class定义的各种信息，<code>beanWrapper</code>为实例化的包装，包含一个实例的各种信息  </p>
+</blockquote>
+<p>通过<code>beanDefinition</code>创建<code>BeanWrapper</code><br>要考虑到factoryBean有可能已经初始化过<a href="#%E9%80%9A%E8%BF%87beanname%E8%8E%B7%E5%8F%96class%E6%B5%81%E7%A8%8B">在根据beanName获取class的过程中</a>）,所以优先从缓存<span id='缓存取对应的beanWrapper'/><code>factoryBeanInstanceCache</code>获取factoryBean对应的beanWrapper，没有则会创建  </p>
+<p>创建beanWrapper其实就是创建bean的实例，创建流程如下  </p>
+<ol>
+<li><p>在beanDefinition中如果提供<code>instanceSupplier</code>则直接调用并返回<br>如我们常用的注解<code>@EnableConfigurationProperties</code>,instanceSupplier就是由他提供实现<code>ConfigurationPropertiesValueObjectBeanDefinition</code>  </p>
+</li>
+<li><p>在beanDefinition中如果提供<code>FactoryMethodName</code>则需要调用此方法获取实例<br>如常用的注解<code>@Bean</code>，该方法如果有参数，则会从从beanDefinition和beanFactory中获取，找不到就报错，最终调用factoryMethod并返回  </p>
+</li>
+<li><p>在beanDefinition中如果有缓存则直接用缓存实例化-非单例的bean可能会多次实例化<br>缓存的是构造方法，有其他步骤给给缓存赋值，如果缓存不为空则直接使用，如果有参数，则会从从beanDefinition和beanFactory中获取  </p>
+</li>
+<li><p>以上步骤都没有实例化则获取所有的构造方法寻找能够实例化的constructor<br>优先使用有@Autowire注解的构造，如果required=true，参数不满足则直接报错，否则尝试用其他的</p>
+</li>
+</ol>
+<blockquote>
+<p>@Lookup注解的原理就是在此实例化bean的时候创建动态代理，具体可参考<code>CglibSubclassingInstantiationStrategy#instantiateWithMethodInjection</code></p>
+</blockquote>
+<hr>
+<h3 id="单例的bean放入三级缓存中"><a href="#单例的bean放入三级缓存中" class="headerlink" title="单例的bean放入三级缓存中"></a>单例的bean放入三级缓存中</h3><p>如果是单例，则通过<a href="/posts/beanpostprocessor%E7%9A%84%E8%B0%83%E7%94%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%90%84%E7%A7%8D%E5%AE%9E%E7%8E%B0#3-getearlybeanreference"><code>SmartInstantiationAwareBeanPostProcessor</code></a>提供早期的引用,并放入三级缓存<code>singletonFactories</code>中<br>等bean初始化完之后如果三级缓存中的bean也初始化了，说明当前bean有循环引用，则用三级缓存中的bean  </p>
+<hr>
+<h3 id="自动装配和初始化方法调用-aop和ioc"><a href="#自动装配和初始化方法调用-aop和ioc" class="headerlink" title="自动装配和初始化方法调用-aop和ioc"></a>自动装配和初始化方法调用-aop和ioc</h3><p>自动装配、初始化方法调用等都是通过beanPostProcessor来实现的<br>执行<a href="/posts/beanpostprocessor%E7%9A%84%E8%B0%83%E7%94%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%90%84%E7%A7%8D%E5%AE%9E%E7%8E%B0#4-postprocessafterinstantiation">beanPostProcessor</a>第四步后面的流程<br>至此bean实例化、初始化完毕。如果是单例的bean则会放到<code>singletonObjects</code>中，缓存起来</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>spring在获取bean的时候如果没有就会自动创建，如果是单例的bean就会缓存起来，非单例的每次根据scope作用域创建<br>spring最著名的莫非IOC和AOP了，在创建bean的时候通过<a href="/posts/beanpostprocessor%E7%9A%84%E8%B0%83%E7%94%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%90%84%E7%A7%8D%E5%AE%9E%E7%8E%B0">beanPostProcessor</a>完成IOC和AOP等逻辑  </p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined" rel="external nofollow noreferrer">author</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://dongmaxiang.vercel.app/posts/spring%E5%AF%B9bean%E5%AE%9E%E4%BE%8B%E5%8C%96-%E5%88%9D%E5%A7%8B%E5%8C%96-%E6%B5%81%E7%A8%8B/">https://dongmaxiang.vercel.app/posts/spring对bean实例化-初始化-流程/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow noreferrer" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://dongmaxiang.vercel.app" target="_blank">title</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E6%BA%90%E7%A0%81/">源码</a><a class="post-meta__tags" href="/tags/spring/">spring</a></div><div class="post_share"><div class="social-share" data-image="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-5.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i> 打赏</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/photo/weChat.jpg" rel="external nofollow noreferrer" target="_blank"><img class="post-qr-code-img" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/photo/weChat.jpg" alt="微信"/></a><div class="post-qr-code-desc">微信</div></li><li class="reward-item"><a href="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/photo/aliPay.jpg" rel="external nofollow noreferrer" target="_blank"><img class="post-qr-code-img" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/photo/aliPay.jpg" alt="支付宝"/></a><div class="post-qr-code-desc">支付宝</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/posts/beanpostprocessor%E7%9A%84%E8%B0%83%E7%94%A8%E6%B5%81%E7%A8%8B%E5%8F%8A%E5%90%84%E7%A7%8D%E5%AE%9E%E7%8E%B0/"><img class="prev-cover" src= "/img/loading.gif" data-lazy-src="/img/posts/2021/beanPostProcessor.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">beanPostProcessor的调用流程及各种实现</div></div></a></div><div class="next-post pull-right"><a href="/posts/%E8%A7%A3%E6%9E%90spring%E6%98%AF%E5%A6%82%E4%BD%95%E5%90%91beanfactory%E6%B3%A8%E5%86%8Cbean%E7%9A%84/"><img class="next-cover" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-9.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">解析spring是如何向beanFactory注册bean的</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/posts/%E5%88%86%E6%9E%90spring%E7%9A%84environment%EF%BC%88%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%EF%BC%89%E7%9A%84%E5%8A%A0%E8%BD%BD/" title="分析spring的Environment（配置文件）的加载"><img class="cover" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-7.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-08-20</div><div class="title">分析spring的Environment（配置文件）的加载</div></div></a></div><div><a href="/posts/%E8%8E%B7%E5%8F%96spring%E5%90%AF%E5%8A%A8%E7%8E%AF%E5%A2%83%E7%9A%84%E5%B7%A5%E5%85%B7%E7%B1%BB/" title="获取spring启动环境的工具类"><img class="cover" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-7.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-08-21</div><div class="title">获取spring启动环境的工具类</div></div></a></div><div><a href="/posts/springboot%E5%AE%B9%E5%99%A8%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" title="springBoot容器启动流程"><img class="cover" src= "/img/loading.gif" data-lazy-src="https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-5.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-08-22</div><div class="title">springBoot容器启动流程</div></div></a></div></div></div><hr/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="twikoo-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%80%9A%E8%BF%87class%E7%B1%BB%E5%9E%8B%E6%88%96%E6%B3%A8%E8%A7%A3%E7%B1%BB%E5%9E%8B%E8%8E%B7%E5%8F%96beanName"><span class="toc-number">2.</span> <span class="toc-text">通过class类型或注解类型获取beanName</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%80%9A%E8%BF%87beanName%E8%8E%B7%E5%8F%96class%E6%B5%81%E7%A8%8B"><span class="toc-number">2.1.</span> <span class="toc-text">通过beanName获取class流程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%80%9A%E8%BF%87class%E8%8E%B7%E5%8F%96%E5%AF%B9%E5%BA%94%E7%9A%84beanNames%E6%B5%81%E7%A8%8B"><span class="toc-number">2.2.</span> <span class="toc-text">通过class获取对应的beanNames流程</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%A0%B9%E6%8D%AEbeanName%E4%BC%98%E5%85%88%E8%8E%B7%E5%8F%96%E5%8D%95%E5%88%97%E7%9A%84bean"><span class="toc-number">3.</span> <span class="toc-text">根据beanName优先获取单列的bean</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8A%8AbeanName%E8%BD%AC%E6%8D%A2%E4%B8%BA%E4%B8%BA%E6%A0%87%E5%87%86%E7%9A%84beanName"><span class="toc-number">3.1.</span> <span class="toc-text">把beanName转换为为标准的beanName</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8D%95%E4%BE%8Bbean%E7%9A%84%E8%8E%B7%E5%8F%96%E6%B5%81%E7%A8%8B"><span class="toc-number">3.2.</span> <span class="toc-text">单例bean的获取流程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#factoryBean%E7%9A%84%E8%BD%AC%E6%8D%A2"><span class="toc-number">3.3.</span> <span class="toc-text">factoryBean的转换</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B7%A5%E5%8E%82bean%E8%B0%83%E7%94%A8%E6%96%B9%E6%B3%95factoryBean-getObject%E6%B5%81%E7%A8%8B"><span class="toc-number">3.4.</span> <span class="toc-text">工厂bean调用方法factoryBean#getObject流程</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%8E%B7%E5%8F%96%E4%B8%8D%E5%88%B0bean%E5%88%99%E5%88%9B%E5%BB%BA"><span class="toc-number">4.</span> <span class="toc-text">获取不到bean则创建</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9B%E5%BB%BAbean%E6%97%B6%E7%9A%84%E5%89%8D%E6%9C%9F%E6%B5%81%E7%A8%8B"><span class="toc-number">4.1.</span> <span class="toc-text">创建bean时的前期流程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%80%9A%E8%BF%87RootBeanDefinition%E8%8E%B7%E5%8F%96%E7%9C%9F%E5%AE%9E%E7%9A%84class"><span class="toc-number">4.2.</span> <span class="toc-text">通过RootBeanDefinition获取真实的class</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%80%9A%E8%BF%87InstantiationAwareBeanPostProcessor%E6%8F%90%E5%89%8D%E5%AE%9E%E4%BE%8B%E5%8C%96"><span class="toc-number">4.3.</span> <span class="toc-text">通过InstantiationAwareBeanPostProcessor提前实例化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%88%9B%E5%BB%BAbeanWrapper"><span class="toc-number">4.4.</span> <span class="toc-text">创建beanWrapper</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8D%95%E4%BE%8B%E7%9A%84bean%E6%94%BE%E5%85%A5%E4%B8%89%E7%BA%A7%E7%BC%93%E5%AD%98%E4%B8%AD"><span class="toc-number">4.5.</span> <span class="toc-text">单例的bean放入三级缓存中</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%87%AA%E5%8A%A8%E8%A3%85%E9%85%8D%E5%92%8C%E5%88%9D%E5%A7%8B%E5%8C%96%E6%96%B9%E6%B3%95%E8%B0%83%E7%94%A8-aop%E5%92%8Cioc"><span class="toc-number">4.6.</span> <span class="toc-text">自动装配和初始化方法调用-aop和ioc</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">5.</span> <span class="toc-text">总结</span></a></li></ol></div></div></div></div></main><footer id="footer" style="background-image: url('https://cdn.jsdelivr.net/gh/dongmaxiang/CDN/blog/material-5.png')"><div id="footer-wrap"><div class="copyright">&copy;2022 By author</div><div class="footer_custom_text">千里之行始于足下</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"></div><div id="rightside-config-show"><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">本地搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div></div></div><div id="search-mask"></div></div><div><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly@4.0.1/source/js/utils.min.js"></script><script src="https://cdn.jsdelivr.net/npm/hexo-theme-butterfly@4.0.1/source/js/main.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui/dist/fancybox.umd.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload/dist/lazyload.iife.min.js"></script><script src="https://cdn.jsdelivr.net/gh/jerryc127/butterfly.js.org/source/selfjs/localsearch.min.js?ver=4.0.0"></script><script>var preloader = {
+  endLoading: () => {
+    document.body.style.overflow = 'auto';
+    document.getElementById('loading-box').classList.add("loaded")
+  },
+  initLoading: () => {
+    document.body.style.overflow = '';
+    document.getElementById('loading-box').classList.remove("loaded")
+
+  }
+}
+window.addEventListener('load',preloader.endLoading())</script><div class="js-pjax"><script>(() => {
+  const $mermaidWrap = document.querySelectorAll('#article-container .mermaid-wrap')
+  if ($mermaidWrap.length) {
+    window.runMermaid = () => {
+      window.loadMermaid = true
+      const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default'
+
+      Array.from($mermaidWrap).forEach((item, index) => {
+        const mermaidSrc = item.firstElementChild
+        const mermaidThemeConfig = '%%{init:{ \'theme\':\'' + theme + '\'}}%%\n'
+        const mermaidID = 'mermaid-' + index
+        const mermaidDefinition = mermaidThemeConfig + mermaidSrc.textContent
+        mermaid.mermaidAPI.render(mermaidID, mermaidDefinition, (svgCode) => {
+          mermaidSrc.insertAdjacentHTML('afterend', svgCode)
+        })
+      })
+    }
+
+    const loadMermaid = () => {
+      window.loadMermaid ? runMermaid() : getScript('https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js').then(runMermaid)
+    }
+
+    window.pjax ? loadMermaid() : document.addEventListener('DOMContentLoaded', loadMermaid)
+  }
+})()</script><script>(()=>{
+  const init = () => {
+    twikoo.init(Object.assign({
+      el: '#twikoo-wrap',
+      envId: 'https://twikoo1-two.vercel.app/',
+      region: '',
+      onCommentLoaded: function () {
+        btf.loadLightbox(document.querySelectorAll('#twikoo .tk-content img:not(.vemoji)'))
+      }
+    }, null))
+  }
+
+  const getCount = () => {
+    twikoo.getCommentsCount({
+      envId: 'https://twikoo1-two.vercel.app/',
+      region: '',
+      urls: [window.location.pathname],
+      includeReply: false
+    }).then(function (res) {
+      document.getElementById('twikoo-count').innerText = res[0].count
+    }).catch(function (err) {
+      console.error(err);
+    });
+  }
+
+  const runFn = () => {
+    init()
+    GLOBAL_CONFIG_SITE.isPost && getCount()
+  }
+
+  const loadTwikoo = () => {
+    if (typeof twikoo === 'object') {
+      setTimeout(runFn,0)
+      return
+    } 
+    getScript('https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js').then(runFn)
+  }
+
+  if ('Twikoo' === 'Twikoo' || !true) {
+    if (true) btf.loadComment(document.getElementById('twikoo-wrap'), loadTwikoo)
+    else loadTwikoo()
+  } else {
+    window.loadOtherComment = () => {
+      loadTwikoo()
+    }
+  }
+})()</script></div><script>window.addEventListener('load', () => {
+  const changeContent = (content) => {
+    if (content === '') return content
+
+    content = content.replace(/<img.*?src="(.*?)"?[^\>]+>/ig, '[图片]') // replace image link
+    content = content.replace(/<a[^>]+?href=["']?([^"']+)["']?[^>]*>([^<]+)<\/a>/gi, '[链接]') // replace url
+    content = content.replace(/<pre><code>.*?<\/pre>/gi, '[代码]') // replace code
+    content = content.replace(/<[^>]+>/g,"") // remove html tag
+
+    if (content.length > 150) {
+      content = content.substring(0,150) + '...'
+    }
+    return content
+  }
+
+  const getComment = () => {
+    const runTwikoo = () => {
+      twikoo.getRecentComments({
+        envId: 'https://twikoo1-two.vercel.app/',
+        region: '',
+        pageSize: 6,
+        includeReply: true
+      }).then(function (res) {
+        const twikooArray = res.map(e => {
+          return {
+            'content': changeContent(e.comment),
+            'avatar': e.avatar,
+            'nick': e.nick,
+            'url': e.url + '#' + e.id,
+            'date': new Date(e.created).toISOString()
+          }
+        })
+
+        saveToLocal.set('twikoo-newest-comments', JSON.stringify(twikooArray), 5/(60*24))
+        generateHtml(twikooArray)
+      }).catch(function (err) {
+        const $dom = document.querySelector('#card-newest-comments .aside-list')
+        $dom.innerHTML= "无法获取评论，请确认相关配置是否正确"
+      })
+    }
+
+    if (typeof twikoo === 'object') {
+      runTwikoo()
+    } else {
+      getScript('https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js').then(runTwikoo)
+    }
+  }
+
+  const generateHtml = array => {
+    let result = ''
+
+    if (array.length) {
+      for (let i = 0; i < array.length; i++) {
+        result += '<div class=\'aside-list-item\'>'
+
+        if (true) {
+          const name = 'data-lazy-src'
+          result += `<a href='${array[i].url}' class='thumbnail'><img ${name}='${array[i].avatar}' alt='${array[i].nick}'></a>`
+        }
+        
+        result += `<div class='content'>
+        <a class='comment' href='${array[i].url}' title='${array[i].content}'>${array[i].content}</a>
+        <div class='name'><span>${array[i].nick} / </span><time datetime="${array[i].date}">${btf.diffDate(array[i].date, true)}</time></div>
+        </div></div>`
+      }
+    } else {
+      result += '没有评论'
+    }
+
+    let $dom = document.querySelector('#card-newest-comments .aside-list')
+    $dom.innerHTML= result
+    window.lazyLoadInstance && window.lazyLoadInstance.update()
+    window.pjax && window.pjax.refresh($dom)
+  }
+
+  const newestCommentInit = () => {
+    if (document.querySelector('#card-newest-comments .aside-list')) {
+      const data = saveToLocal.get('twikoo-newest-comments')
+      if (data) {
+        generateHtml(JSON.parse(data))
+      } else {
+        getComment()
+      }
+    }
+  }
+
+  newestCommentInit()
+  document.addEventListener('pjax:complete', newestCommentInit)
+})</script><div class="aplayer no-destroy" data-id="7342827202" data-server="netease" data-type="playlist" data-fixed="true" data-autoplay="true"> </div><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-fluttering-ribbon.min.js"></script><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/activate-power-mode.min.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+POWERMODE.mobile = true;
+document.body.addEventListener('input', POWERMODE);
+</script><script id="click-show-text" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/click-show-text.min.js" data-mobile="false" data-text="富强,民主,文明,和谐,自由,平等,公正,法治,爱国,敬业,诚信,友善" data-fontsize="15px" data-random="false" async="async"></script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js"></script><script src="https://cdn.jsdelivr.net/gh/metowolf/MetingJS@1.2/dist/Meting.min.js"></script><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js"></script><script>let pjaxSelectors = ["title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+var pjax = new Pjax({
+  elements: 'a:not([target="_blank"])',
+  selectors: pjaxSelectors,
+  cacheBust: false,
+  analytics: true,
+  scrollRestoration: false
+})
+
+document.addEventListener('pjax:send', function () {
+
+  // removeEventListener scroll 
+  window.tocScrollFn && window.removeEventListener('scroll', window.tocScrollFn)
+  window.scrollCollect && window.removeEventListener('scroll', scrollCollect)
+
+  typeof preloader === 'object' && preloader.initLoading()
+  document.getElementById('rightside').style.cssText = "opacity: ''; transform: ''"
+  
+  if (window.aplayers) {
+    for (let i = 0; i < window.aplayers.length; i++) {
+      if (!window.aplayers[i].options.fixed) {
+        window.aplayers[i].destroy()
+      }
+    }
+  }
+
+  typeof typed === 'object' && typed.destroy()
+
+  //reset readmode
+  const $bodyClassList = document.body.classList
+  $bodyClassList.contains('read-mode') && $bodyClassList.remove('read-mode')
+
+})
+
+document.addEventListener('pjax:complete', function () {
+  window.refreshFn()
+
+  document.querySelectorAll('script[data-pjax]').forEach(item => {
+    const newScript = document.createElement('script')
+    const content = item.text || item.textContent || item.innerHTML || ""
+    Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+    newScript.appendChild(document.createTextNode(content))
+    item.parentNode.replaceChild(newScript, item)
+  })
+
+  GLOBAL_CONFIG.islazyload && window.lazyLoadInstance.update()
+
+  typeof chatBtnFn === 'function' && chatBtnFn()
+  typeof panguInit === 'function' && panguInit()
+
+  // google analytics
+  typeof gtag === 'function' && gtag('config', 'G-RPEPZKPQGQ', {'page_path': window.location.pathname});
+
+  // baidu analytics
+  typeof _hmt === 'object' && _hmt.push(['_trackPageview',window.location.pathname]);
+
+  typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+
+  // prismjs
+  typeof Prism === 'object' && Prism.highlightAll()
+
+  typeof preloader === 'object' && preloader.endLoading()
+})
+
+document.addEventListener('pjax:error', (e) => {
+  if (e.request.status === 404) {
+    pjax.loadUrl('/404.html')
+  }
+})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><!-- hexo injector body_end start --><script data-pjax>
+if (GLOBAL_CONFIG_SITE.isPost && document.getElementById(decodeURI(location.hash.replace('#', '')))){
+    setTimeout(function self(){
+        let nextFrame;
+        document.getAnimations().forEach(function (item){
+            if (item.animationName === 'bottom-top'){
+                nextFrame = true;
+            }
+        });
+        if (nextFrame){
+            setTimeout(self, 0);
+            return;
+        }
+        btf.scrollToDest(btf.getEleTop(document.getElementById(decodeURI(location.hash.replace('#', '')))), 300);
+    }, 0);
+}
+</script><script class="js-pjax">
+
+document.querySelectorAll('a[href^="#"]:not([href="#"])').forEach(function (a){
+    a.addEventListener('click', function (e){
+        e.preventDefault();
+        e.stopPropagation();
+        window.history.pushState(null, null, this.hash);
+        btf.scrollToDest(btf.getEleTop(document.getElementById(decodeURI(a.hash.replace('#', '')))), 300);
+    });
+});
+
+!function (){
+    if (!GLOBAL_CONFIG_SITE.isToc){
+        return;
+    }
+    let toc = document.getElementById('mobile-toc-button');
+    if (!toc){
+        return;
+    }
+    
+    let tocHeadline = document.getElementsByClassName("item-headline")[0];
+    
+    tocHeadline.querySelectorAll('*').forEach(function (item){
+        item.style.cursor = 'pointer';
+        item.onmouseover = function(){
+            tocHeadline.style.fontWeight = "bold"; 
+        };
+        item.onmouseout = function(){
+            tocHeadline.style.fontWeight = ""; 
+        };
+        item.addEventListener('click', function (){
+            tocHeadline.nextElementSibling.classList.toggle('is-expand')
+        });
+    });
+    
+    let fa_close = document.createElement("i");
+    fa_close.style.cursor = 'pointer';
+    fa_close.classList.add("fa");
+    fa_close.classList.add("fa-close");
+    fa_close.addEventListener('click', function (){
+        toc.click();
+    });
+    tocHeadline.appendChild(fa_close);
+    
+    // 如果offsetParent不存在，说明此元素被隐藏，不是小屏设备
+    // if (!toc.offsetParent) {
+    //     return;
+    // }
+    
+    // 打开toc
+    setTimeout(function self(){
+        // 等待该组件加载完成
+        if (!window.mobileToc || !window.mobileToc.open){
+            setTimeout(self, 0);
+            return;
+        }
+        window.mobileToc.open();
+    }, 0);
+    
+    // 点击目录并不会自动关闭，只有重复点击才会关闭toc
+    Array.from(document.getElementsByClassName("toc") || []).forEach(function(item){
+        item.addEventListener('click', function (e){
+            e.preventDefault();
+            e.stopPropagation();
+            let active = document.querySelector('.toc-link.active');
+            if(active === e.target || active === e.target.parentElement) { 
+                window.mobileToc.close();
+                return;
+            }
+            const $target = e.target.classList.contains('toc-link') ? e.target : e.target.parentElement;
+            btf.scrollToDest(btf.getEleTop(document.getElementById(decodeURI($target.hash).replace('#', ''))), 300);
+        });
+    });
+}();
+</script><!-- hexo injector body_end end --></body></html>
